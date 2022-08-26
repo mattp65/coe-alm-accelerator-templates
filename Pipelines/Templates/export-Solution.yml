@@ -29,7 +29,10 @@ parameters:
 - name: email
   type: string
   default: ''
-- name: serviceConnection
+- name: serviceConnectionName
+  type: string
+  default: ''
+- name: serviceConnectionUrl
   type: string
   default: ''
 - name: solutionName
@@ -44,7 +47,22 @@ parameters:
 steps:
 - template: set-spn-token.yml
   parameters:
-    serviceConnection: '$(ServiceConnection)'
+    serviceConnection: '${{parameters.serviceConnectionUrl}}'
+
+- pwsh: |
+    . "$env:POWERSHELLPATH/load-save-pipeline-parameters.ps1"
+    Write-Export-Pipeline-Parameters "$(Agent.BuildDirectory)\export-pipeline-parameters.json" "${{ parameters.gitAccessUrl }}" "${{ parameters.project }}" "${{ parameters.repo }}" "${{ parameters.branch }}" "${{ parameters.branchToCreate }}" "${{ parameters.commitMessage }}" "${{ parameters.email }}" "${{ parameters.serviceConnectionName }}" "${{ parameters.serviceConnectionUrl }}" "${{ parameters.solutionName }}" "${{ parameters.userName }}"
+  env:
+    DEPLOYMENT_SETTINGS: ${{parameters.configurationData}}
+  displayName: 'Saving Export Pipeline Parameters'
+
+- template: Hooks\export-solution-pre-hook.yml
+
+- template: set-service-connection-url.yml
+  parameters:
+    serviceConnectionName: '${{parameters.serviceConnectionName}}'
+    serviceConnectionUrl: '${{parameters.serviceConnectionUrl}}'
+
 # Set pipeline vars for tools paths.
 - template: set-tools-paths.yml
 
@@ -71,48 +89,49 @@ steps:
    git checkout -b ${{parameters.branchToCreate}} ${{parameters.branch}}
   displayName: 'Create New Git Branch: ${{parameters.branchToCreate}}'
   workingDirectory: $(Build.SourcesDirectory)\${{parameters.repo}}
-  condition: and(succeeded(), ne(variables.BranchToCreate, '')) # If an empty value is passed for the BranchToCreate variable, then skip this task
+  condition: and(succeeded(), ne('${{parameters.branchToCreate}}', 'Commit to existing branch specified in Branch parameter')) # If an empty value is passed for the BranchToCreate variable, then skip this task
 
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.tool-installer.PowerPlatformToolInstaller@0
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.tool-installer.PowerPlatformToolInstaller@2
   displayName: 'Install Power Platform Build Tools'
-  inputs:
-    DefaultVersion: false
-    CrmSdkCoreToolsVersion: 9.1.0.108
 
 - template: install-powershell-modules.yml
 
 # Before exporting the solution, publish solution customizations to ensure all the changes are exported
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.publish-customizations.PowerPlatformPublishCustomizations@0
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.publish-customizations.PowerPlatformPublishCustomizations@2
   displayName: 'Publish Customizations'
   inputs:
     authenticationType: PowerPlatformSPN
-    PowerPlatformSPN: '${{parameters.serviceConnection}}'
+    PowerPlatformSPN: ${{parameters.serviceConnectionName}}
 
 # Export both unmanaged and managed to put into source control
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.export-solution.PowerPlatformExportSolution@0
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.export-solution.PowerPlatformExportSolution@2
   displayName: 'Export Unmanaged Solution'
   inputs:
     authenticationType: PowerPlatformSPN
-    PowerPlatformSPN: '${{parameters.serviceConnection}}'
+    PowerPlatformSPN: ${{parameters.serviceConnectionName}}
     SolutionName: '${{parameters.solutionName}}'
     SolutionOutputFile: '$(Build.ArtifactStagingDirectory)\${{parameters.solutionName}}.zip'
 
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.export-solution.PowerPlatformExportSolution@0
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.export-solution.PowerPlatformExportSolution@2
   displayName: 'Export Managed Solution'
   inputs:
     authenticationType: PowerPlatformSPN
-    PowerPlatformSPN: '${{parameters.serviceConnection}}'
+    PowerPlatformSPN: ${{parameters.serviceConnectionName}}
     SolutionName: '${{parameters.solutionName}}'
     SolutionOutputFile: '$(Build.ArtifactStagingDirectory)\${{parameters.solutionName}}_managed.zip'
     Managed: true
 
+- template: Hooks\export-solution-unpack-pre-hook.yml
+
 # Unpack contents of solution to make the contents source control friendly 
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.unpack-solution.PowerPlatformUnpackSolution@0
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.unpack-solution.PowerPlatformUnpackSolution@2
   displayName: 'Power Platform Unpack Solution'
   inputs:
     SolutionInputFile: '$(Build.ArtifactStagingDirectory)\${{parameters.solutionName}}.zip'
     SolutionTargetFolder: '$(Build.SourcesDirectory)\${{parameters.repo}}\${{parameters.solutionName}}\SolutionPackage'
     SolutionType: Both
+
+- template: Hooks\export-solution-manipulate-pre-hook.yml
 
 - pwsh: |
    Get-ChildItem -Path "$(Build.SourcesDirectory)\${{parameters.repo}}\${{parameters.solutionName}}\SolutionPackage\**\Solution.xml" | 
@@ -123,7 +142,7 @@ steps:
    }
   displayName: 'Update Solution XML with Build Number'
 
-- powershell: |
+- pwsh: |
     #Set variable to continue on unpack error for use in the next two steps
     if('$(ContinueOnCanvasUnpackError)'.Contains("ContinueOnCanvasUnpackError")) {
         Write-Host "##vso[task.setvariable variable=ContinueOnCanvasUnpackError]false"
@@ -178,7 +197,7 @@ steps:
 # TEMPORARY until Solution export supports not exporting custom connector configurations
 # We need to clear out the contents of any *_connectionparameters.json file.  This is to ensure those valuse
 # are not overwritten when the Solution is imported to a downstream environment.
-- powershell: |   
+- pwsh: |   
    Get-ChildItem -Path "$(Build.SourcesDirectory)\${{parameters.repo}}\${{parameters.solutionName}}" -Recurse -Filter *_connectionparameters.json | 
    ForEach-Object {
       Clear-Content $_.FullName
@@ -186,7 +205,7 @@ steps:
   displayName: 'Clear contents of *_connectionparameters.json files'
   enabled: true
 
-- powershell: |
+- pwsh: |
     if (Test-Path $(Build.ArtifactStagingDirectory)\${{parameters.solutionName}}_managed.zip) {
         Remove-Item $(Build.ArtifactStagingDirectory)\${{parameters.solutionName}}_managed.zip
     }
@@ -199,7 +218,7 @@ steps:
 # TEMPORARY until SolutionPackager supports formatting json files on unpack we
 # update all the json files to be pretty-print / formatted so they are easier to read in source control.
 # This also makes it easier to read changes from one commit to another
-- powershell: |
+- pwsh: |
    Get-ChildItem -Path "$(Build.SourcesDirectory)\${{parameters.repo}}\${{parameters.solutionName}}\SolutionPackage" -Recurse -Filter *.json | 
    ForEach-Object {
     #skip canvas app and workflows folder because canvas and flows team already handles this
@@ -215,7 +234,7 @@ steps:
 # TEMPORARY until solution exports new business rules with non-empty GUIDs
 # We need to set empty GUIDs output when a business rule is first exported.  This is to ensure that
 # there aren't noisy diffs when the business rule is subsequently imported and exported.
-- powershell: |
+- pwsh: |
    # Regex to extract GUID from the end of the filename
    $reGuid = '(([0-9a-f]){8}-([0-9a-f]){4}-([0-9a-f]){4}-([0-9a-f]){4}-([0-9a-f]){12})\.xaml$'
    Get-ChildItem -Path "$(Build.SourcesDirectory)\${{parameters.repo}}\${{parameters.solutionName}}\SolutionPackage\Workflows" -Recurse -File -Filter *.xaml | 
@@ -233,34 +252,37 @@ steps:
      }
   displayName: 'Fix unset GUIDs in new Business Rules'
 
-- powershell: |
+- pwsh: |
    Get-ChildItem -Path "$(Build.SourcesDirectory)\${{parameters.repo}}\${{parameters.solutionName}}\SolutionPackage\environmentvariabledefinitions" -Recurse -Filter environmentvariablevalues.json | Remove-Item
   displayName: 'Verify Environment Variable Current Value Not Exported'
   condition: and(succeeded(), eq(variables.DoNotExportCurrentEnvironmentVariableValues, 'true'))
 
-# Set paths to deployment settings
-- template: set-deployment-configuration-paths.yml
-  parameters:
-    configPath: '$(Build.SourcesDirectory)\${{parameters.repo}}\${{parameters.solutionName}}\config\'
-    environmentName: ''
- 
+- template: Hooks\export-solution-update-deploymentsettings-pre-hook.yml
+
 # Update deployment settings configuration
 - template: update-deployment-settings.yml
   parameters:
     orgUrl: '$(System.TeamFoundationCollectionUri)'
     projectName: '${{parameters.project}}'
     repo: '${{parameters.repo}}'
-    serviceConnection: '${{parameters.serviceConnection}}'
+    serviceConnection: '${{parameters.serviceConnectionUrl}}'
     solutionName: '${{parameters.solutionName}}'
-    profileEnvironmentUrl: '$(EnvironmentName)'
-    profileId: '$(BuildDefinitionId)'
     configurationData: '${{parameters.configurationData}}'
-    generateEnvironmentVariables: $(DeploymentSettings.GenerateEnvironmentVariables)
-    generateConnectionReferences: $(DeploymentSettings.GenerateConnectionReferences)
-    generateFlowConfig: $(DeploymentSettings.GenerateFlowOwnership)
-    generateCanvasSharingConfig: $(DeploymentSettings.GenerateCanvasAppSharing)
-    generateAADGroupTeamConfig: $(DeploymentSettings.GenerateAADGroupTeam)
-    generateCustomConnectorConfig: $(DeploymentSettings.GenerateCustomConnectorConfig)
+    useDeploymentSettingsPlaceholders: $(UseDeploymentSettingsPlaceholders)
+
+# Set paths to deployment settings
+- template: set-deployment-configuration-paths.yml
+  parameters:
+    configPath: '$(Build.SourcesDirectory)\${{parameters.repo}}\${{parameters.solutionName}}\config\'
+    environmentName: ''
+
+# Set deployment variable for Activate Flow Configuration
+- template: set-deployment-variable.yml
+  parameters:
+    variableName: 'outActivateFlows'
+    deploymentSettingsPath: $(CustomDeploymentSettingsPath)
+    deploymentSettingsNode: 'ActivateFlowConfiguration'
+    displayName: 'Retrieve Flow Activation Config for Export'
 
 # Enabled or Disable Flows in the Solution based on configuration
 - template: enable-disable-solution-flows.yml
@@ -279,9 +301,9 @@ steps:
     deploymentSettingsNode: 'DefaultEnvironmentVariables'
     displayName: 'Retrieve Default Environment Variable Config for Export'
 
-- powershell: |
+- pwsh: |
    if('$(outDefaultEnvironmentVariables)' -ne '') {
-       $config = ConvertFrom-Json '$(outDefaultEnvironmentVariables)'
+       $config = Get-Content $(outDefaultEnvironmentVariables) | ConvertFrom-Json
        foreach ($c in $config) {
            $envVariableName = $c[0]
            Get-ChildItem -Path "$(Build.SourcesDirectory)\${{parameters.repo}}\${{parameters.solutionName}}\SolutionPackage\environmentvariabledefinitions\$envVariableName\environmentvariabledefinition.xml" | 
@@ -304,13 +326,15 @@ steps:
   displayName: 'Verify Default Environment Variables Are Set'
   condition: and(succeeded(), eq(variables.VerifyDefaultEnvironmentVariableValues, 'true'))
 
-- powershell: |
+- template: Hooks\export-solution-commit-pre-hook.yml
+
+- pwsh: |
     git add --all
   workingDirectory: $(Build.SourcesDirectory)\${{parameters.repo}}
   displayName: 'Add Changes to Git Branch'
 
 # Commit all changes to Git branch. If there are no changes we want to warn the user that there was nothing to commit. As this could mean there was a user error involved.
-- powershell: |
+- pwsh: |
     $gitStatus = iex "git status --porcelain"
     if ($gitStatus) {
         git commit -m "${{parameters.commitMessage}}"
@@ -327,23 +351,23 @@ steps:
 - script: |
    git -c http.extraheader="AUTHORIZATION: bearer $(System.AccessToken)" push origin ${{parameters.branch}}
   workingDirectory: $(Build.SourcesDirectory)\${{parameters.repo}}
-  displayName: 'Push to $(Branch) Remote Branch'
-  condition: and(eq('${{parameters.gitAccessUrl}}', ''), succeeded(), eq(variables.BranchToCreate, '')) # If an empty value is passed for the BranchToCreate variable, then run this task
+  displayName: 'Push to ${{parameters.branch}} Remote Branch'
+  condition: and(eq('${{parameters.gitAccessUrl}}', ''), succeeded(), eq('${{parameters.branchToCreate}}', 'Commit to existing branch specified in Branch parameter')) # If an empty value is passed for the BranchToCreate variable, then run this task
 
 # If BranchToCreate variable value is not '', then push to the branch specified in the BranchToCreate variable
 - script: |
    git -c http.extraheader="AUTHORIZATION: bearer $(System.AccessToken)" push origin ${{parameters.branchToCreate}}
   workingDirectory: $(Build.SourcesDirectory)\${{parameters.repo}}
   displayName: 'Push to ${{parameters.branchToCreate}} Remote Branch'
-  condition: and(eq('${{parameters.gitAccessUrl}}', ''), succeeded(), ne(variables.BranchToCreate, '')) # If an empty value is not passed for the BranchToCreate variable, then run this task
+  condition: and(eq('${{parameters.gitAccessUrl}}', ''), succeeded(), ne('${{parameters.branchToCreate}}', 'Commit to existing branch specified in Branch parameter')) # If an empty value is not passed for the BranchToCreate variable, then run this task
 
-# If BranchToCreate variable value is '', then push to the branch specified in the Branch variable
+# If BranchToCreate variable value is '', then push to the branch specified in the BranchToCreate variable
 - script: |
    git remote set-url origin ${{parameters.gitAccessUrl}}
    git push origin ${{parameters.branch}}
   workingDirectory: $(Build.SourcesDirectory)\${{parameters.repo}}
   displayName: 'Push to ${{parameters.branchToCreate}} Remote Branch'
-  condition: and(ne('${{parameters.gitAccessUrl}}', ''), succeeded(), eq(variables.BranchToCreate, '')) # If an empty value is passed for the BranchToCreate variable, then run this task
+  condition: and(ne('${{parameters.gitAccessUrl}}', ''), succeeded(), eq('${{parameters.branchToCreate}}', 'Commit to existing branch specified in Branch parameter')) # If an empty value is passed for the BranchToCreate variable, then run this task
 
 # If BranchToCreate variable value is not '', then push to the branch specified in the BranchToCreate variable
 - script: |
@@ -351,4 +375,6 @@ steps:
    git push origin ${{parameters.branchToCreate}}
   workingDirectory: $(Build.SourcesDirectory)\${{parameters.repo}}
   displayName: 'Push to ${{parameters.branchToCreate}} Remote Branch'
-  condition: and(ne('${{parameters.gitAccessUrl}}', ''), succeeded(), ne(variables.BranchToCreate, '')) # If an empty value is not passed for the BranchToCreate variable, then run this task
+  condition: and(ne('${{parameters.gitAccessUrl}}', ''), succeeded(), ne('${{parameters.branchToCreate}}', 'Commit to existing branch specified in Branch parameter')) # If an empty value is not passed for the BranchToCreate variable, then run this task
+
+- template: Hooks\export-solution-post-hook.yml

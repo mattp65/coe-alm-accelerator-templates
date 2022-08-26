@@ -1,4 +1,11 @@
-﻿function Set-EnableDisableSolutionFlows($buildSourceDirectory, $repo, $solutionName, $disableAllFlows, $activateFlowConfigJson) {
+﻿function Set-EnableDisableSolutionFlows {
+    param (
+        [Parameter(Mandatory)] [String]$buildSourceDirectory,
+        [Parameter(Mandatory)] [String]$repo,
+        [Parameter(Mandatory)] [String]$solutionName,
+        [Parameter(Mandatory)] [String]$disableAllFlows,
+        [Parameter()] [String]$activateFlowConfigJson
+    )
     if ($disableAllFlows -eq 'true') {
         Get-ChildItem -Path "$buildSourceDirectory\$repo\$solutionName\SolutionPackage\Workflows" -Recurse -Filter *.xml | 
         ForEach-Object {
@@ -11,9 +18,9 @@
     }
     else {
 		Write-Host $activateFlowConfigJson
-        if (!$activateFlowConfigJson.Contains('$(')) {
+        if ($activateFlowConfigJson -ne '') {
             #Disable / Enable flows based on configuration
-            $activateFlowConfigs = ConvertFrom-Json $activateFlowConfigJson
+            $activateFlowConfigs = Get-Content $activateFlowConfigJson | ConvertFrom-Json
             Write-Host "Retrieved " $activateFlowConfigs.Length " flow activation configurations"
             foreach ($activateFlowConfig in $activateFlowConfigs) {
                 $filter = "*" + $activateFlowConfig.solutionComponentUniqueName + "*.xml"

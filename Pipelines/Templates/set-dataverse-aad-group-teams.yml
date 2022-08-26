@@ -28,7 +28,8 @@ steps:
     #   }
     # ]
     Write-Host '${{parameters.aadGroupTeamConfiguration}}'
-    $config = ConvertFrom-Json '${{parameters.aadGroupTeamConfiguration}}'
+
+    $config = Get-Content '${{parameters.aadGroupTeamConfiguration}}' | ConvertFrom-Json
 
     foreach ($c in $config){
       $aadGroupTeamName = $c.aadGroupTeamName
@@ -65,4 +66,4 @@ steps:
         }
     }
   displayName: 'Set Dataverse AAD Group Teams'
-  condition: and(succeeded(), ne('${{parameters.aadGroupTeamConfiguration}}', ''))
+  condition: and(succeeded(), not(contains('${{parameters.aadGroupTeamConfiguration}}', '$(')))
