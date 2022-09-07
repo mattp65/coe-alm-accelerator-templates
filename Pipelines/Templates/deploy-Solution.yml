@@ -131,21 +131,13 @@ steps:
         }
     }
     Write-Host "##vso[task.setVariable variable=ManagedSolutionPath]$managedSolutionPath"
+
+    #Set TriggerSolutionUpgrade to false if the variable is not set
+    if('$(TriggerSolutionUpgrade)'.Contains("TriggerSolutionUpgrade")) {
+        Write-Host "##vso[task.setVariable variable=TriggerSolutionUpgrade]false"
+    }
   displayName: 'Get managed solution zip path'
   condition: and(succeeded(), ne('${{parameters.importUnmanaged}}', 'true'))
-
-- pwsh: |    
-    # If Solution Upgrade was not set at Canvas App Deployment Settings screen, check whether PR has Tag.
-    if('$(TriggerSolutionUpgrade)'.Contains("TriggerSolutionUpgrade"))
-    {
-        . "$env:POWERSHELLPATH/set-trigger-solution-upgrade.ps1"
-        Set-TriggerSolutionUpgrade '$(TriggerSolutionUpgrade)' '$(System.TeamFoundationCollectionUri)' '$(System.TeamProjectId)' '$(Build.Repository.Name)' '$(Build.Repository.Provider)' '$(Build.SourceVersion)' '$(Build.Reason)' '$(GitHubRepo)' '$(GitHubPAT)'
-    }
-  env:
-    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-  name: setTriggerSolutionUpgrade
-  condition: and(succeeded(), ne('${{parameters.importUnmanaged}}', 'true'))
-  displayName: 'Set TriggerSolutionUpgrade Variable'
 
 # If the TriggerSolutionUpgrade variable is false, then import the solution as an Update
 - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.import-solution.PowerPlatformImportSolution@2
@@ -295,4 +287,21 @@ steps:
     makerPortalUrl: '$(TestAutomationMakerPortalUrl)'
     loginMethod: '$(TestAutomationLoginMethod)'
 
+# ALM Accelerator currently supports ALM of single website.
+# PowerPages folder contain one subfolder at depth 1, which is the unpacked WebSite folder.
+- pwsh: |
+    . "$env:POWERSHELLPATH/portal-functions.ps1"
+    $websiteName = Get-Website-Name "$(Build.SourcesDirectory)" "$(Build.Repository.Name)" "${{parameters.solutionName}}"
+    echo "##vso[task.setvariable variable=WebsiteName]$websiteName"
+    Write-Host "websiteName - $websiteName"
+  displayName: "Fetch Portal Website Name"
+
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.upload-paportal.PowerPlatformUploadPaportal@2
+  displayName: 'Upload Power Page ${{parameters.solutionName}}'
+  inputs:
+    authenticationType: PowerPlatformSPN
+    PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
+    UploadPath: '$(Build.SourcesDirectory)\$(Build.Repository.Name)\${{parameters.solutionName}}\PowerPages\$(WebsiteName)\'
+    Environment: '${{parameters.serviceConnectionUrl}}'
+  condition: and(succeeded(), ne(variables['WebsiteName'], 'NA'))
 - template: Hooks\deploy-solution-post-hook.yml
