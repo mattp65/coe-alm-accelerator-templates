@@ -1,0 +1,1113 @@
+[
+  {
+    "ApprovalType": 809060000,
+    "BuildName": "deploy-validation-ALMAcceleratorSampleSolution",
+    "BuildTemplate": null,
+    "DeploymentEnvironmentName": "Validation",
+    "DeploymentEnvironmentUrl": "https://contoso-validation.crm3.dynamics.com/",
+    "EnvironmentUrl": "https://contoso-dev.crm.dynamics.com/",
+    "ServiceConnectionName": null,
+    "StepType": 809060001,
+    "UserSettings": [
+      {
+        "Data": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "Name": "connectionreference.cat_CDS_Current",
+        "Value": "e34cedbfbb964b4ca7fc7b806121d17c"
+      },
+      {
+        "Name": "connectionreference.user.cat_CDS_Current",
+        "Value": "3b8bd16c-e11b-408a-aae3-91409c286939"
+      },
+      {
+        "Name": "connectionreference.shared.cat_CDS_Current",
+        "Value": "true"
+      },
+      {
+        "Data": "/providers/Microsoft.PowerApps/apis/shared_office365",
+        "Name": "connectionreference.cat_sharedoffice365_4ee46",
+        "Value": "f9124897514f434f85df0f3b2a06cb61"
+      },
+      {
+        "Name": "connectionreference.user.cat_sharedoffice365_4ee46",
+        "Value": "3b8bd16c-e11b-408a-aae3-91409c286939"
+      },
+      {
+        "Name": "connectionreference.shared.cat_sharedoffice365_4ee46",
+        "Value": "true"
+      },
+      {
+        "Data": "100000000",
+        "Name": "environmentvariable.cat_TextEnvironmentVariable",
+        "Value": "Validation Cat Facts"
+      },
+      {
+        "Data": "100000000",
+        "Name": "environmentvariable.cat_ConnectorHostUrl",
+        "Value": "catfact.ninja"
+      },
+      {
+        "Data": "100000001",
+        "Name": "environmentvariable.cat_DecimalEnvironmentVariable",
+        "Value": "10.0"
+      },
+      {
+        "Data": "100000003",
+        "Name": "environmentvariable.cat_JsonEnvironmentVariable",
+        "Value": "{\"testingUpdate\": \"New Variable Config\"}"
+      },
+      {
+        "Data": "100000004",
+        "Name": "environmentvariable.cat_shared_sharepointonline_21f63b2d26f043fb85a5c32fc0c65924",
+        "Value": "f7589fad-fdf9-443c-926e-026839a2e9a3"
+      },
+      {
+        "Data": "100000004",
+        "Name": "environmentvariable.cat_shared_sharepointonline_97456712308a4e65aae18bafcd84c81f",
+        "Value": "https://contoso.sharepoint.com/sites/ALMAcceleratorTest"
+      },
+      {
+        "Data": "100000005",
+        "Name": "environmentvariable.cat_ALMAcceleratorSampleSecret",
+        "Value": ""
+      },
+      {
+        "Name": "webhookurl.SampleHook",
+        "Value": null
+      },
+      {
+        "Name": "sdkstep.unsec.2e9fc4e4-ddf0-ed11-8848-6045bd08d866",
+        "Value": "{\"Validation\": \"Validation\"}"
+      },
+      {
+        "Name": "sdkstep.sec.2e9fc4e4-ddf0-ed11-8848-6045bd08d866",
+        "Value": "{\"Secured\": \"Secured\"}"
+      },
+      {
+        "Name": "canvasshare.aadGroupId.cat_devopskitsamplecanvasapp_c7ec5",
+        "Value": "393805da-5c67-4cae-a607-2a3323613d4f"
+      },
+      {
+        "Name": "canvasshare.roleName.cat_devopskitsamplecanvasapp_c7ec5",
+        "Value": "CanView"
+      },
+      {
+        "Name": "canvasshare.aadGroupId.cat_devopskitsamplecanvasapp_c7ec5.1",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "canvasshare.roleName.cat_devopskitsamplecanvasapp_c7ec5.1",
+        "Value": "CanEdit"
+      },
+      {
+        "Name": "canvasshare.aadGroupId.cat_devopskitsamplecanvasapp_c7ec5.2",
+        "Value": "c437053f-8a3f-4d09-9aa3-75dd6ef302bc"
+      },
+      {
+        "Name": "canvasshare.roleName.cat_devopskitsamplecanvasapp_c7ec5.2",
+        "Value": "CanView"
+      },
+      {
+        "Name": "owner.ownerEmail.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "Adele D4T Team"
+      },
+      {
+        "Name": "activateflow.activateas.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "activateflow.order.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "1"
+      },
+      {
+        "Name": "activateflow.activate.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "Adele D4T Team"
+      },
+      {
+        "Name": "activateflow.activateas.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "activateflow.order.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "3"
+      },
+      {
+        "Name": "activateflow.activate.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "Adele D4T Team"
+      },
+      {
+        "Name": "activateflow.activateas.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "activateflow.order.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "4"
+      },
+      {
+        "Name": "activateflow.activate.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "Adele D4T Team"
+      },
+      {
+        "Name": "activateflow.activateas.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "5"
+      },
+      {
+        "Name": "activateflow.activate.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "Adele D4T Team"
+      },
+      {
+        "Name": "activateflow.activateas.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "5"
+      },
+      {
+        "Name": "activateflow.activate.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "false"
+      },
+      {
+        "Data": "ALM Accelerator Sample Role,Basic User",
+        "Name": "groupTeam.0a118af6-d8ba-4bed-b3e3-aa0cf9964af8.Adele D4T Team",
+        "Value": "c437053f-8a3f-4d09-9aa3-75dd6ef302bc"
+      },
+      {
+        "Name": "businessUnit.0a118af6-d8ba-4bed-b3e3-aa0cf9964af8.Adele D4T Team",
+        "Value": "881fb0a1-dcee-ed11-8848-000d3a09c725"
+      },
+      {
+        "Name": "teamnameskiproles.0a118af6-d8ba-4bed-b3e3-aa0cf9964af8.Adele D4T Team",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.0a118af6-d8ba-4bed-b3e3-aa0cf9964af8",
+        "Value": "Adele D4T Team"
+      },
+      {
+        "Data": "Basic User,ALM Accelerator Sample Role",
+        "Name": "groupTeam.0afe4581-354d-446c-86ae-6ca59f9bd126.ALM Accelerator Users",
+        "Value": "393805da-5c67-4cae-a607-2a3323613d4f"
+      },
+      {
+        "Name": "businessUnit.0afe4581-354d-446c-86ae-6ca59f9bd126.ALM Accelerator Users",
+        "Value": "881fb0a1-dcee-ed11-8848-000d3a09c725"
+      },
+      {
+        "Name": "teamnameskiproles.0afe4581-354d-446c-86ae-6ca59f9bd126.ALM Accelerator Users",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.0afe4581-354d-446c-86ae-6ca59f9bd126",
+        "Value": "ALM Accelerator Users"
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "c437053f-8a3f-4d09-9aa3-75dd6ef302bc"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "881fb0a1-dcee-ed11-8848-000d3a09c725"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Name": "connector.teamname.EnvironmentVariableConnector.b464e249-0bf7-48c0-8350-24476349bac1",
+        "Value": "ALM Accelerator Users"
+      },
+      {
+        "Name": "TriggerSolutionUpgrade",
+        "Value": "false"
+      },
+      {
+        "Name": "UserSettingId",
+        "Value": "958a5097-3061-ed11-9562-000d3a32af20"
+      }
+    ],
+    "VariableGroup": null
+  },
+  {
+    "ApprovalType": 809060000,
+    "BuildName": "deploy-test-ALMAcceleratorSampleSolution",
+    "BuildTemplate": null,
+    "DeploymentEnvironmentName": "Test",
+    "DeploymentEnvironmentUrl": "https://contoso-test.crm.dynamics.com/",
+    "EnvironmentUrl": "https://contoso-dev.crm.dynamics.com/",
+    "ServiceConnectionName": null,
+    "StepType": 809060001,
+    "UserSettings": [
+      {
+        "Data": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "Name": "connectionreference.cat_CDS_Current",
+        "Value": "876789c213184cb6b434396ef69d9c23"
+      },
+      {
+        "Name": "connectionreference.user.cat_CDS_Current",
+        "Value": "3b8bd16c-e11b-408a-aae3-91409c286939"
+      },
+      {
+        "Name": "connectionreference.shared.cat_CDS_Current",
+        "Value": "false"
+      },
+      {
+        "Data": "/providers/Microsoft.PowerApps/apis/shared_office365",
+        "Name": "connectionreference.cat_sharedoffice365_4ee46",
+        "Value": "308529d35f0b406e8d86ec9bb03a7dad"
+      },
+      {
+        "Name": "connectionreference.user.cat_sharedoffice365_4ee46",
+        "Value": "3b8bd16c-e11b-408a-aae3-91409c286939"
+      },
+      {
+        "Name": "connectionreference.shared.cat_sharedoffice365_4ee46",
+        "Value": "false"
+      },
+      {
+        "Data": "100000000",
+        "Name": "environmentvariable.cat_TextEnvironmentVariable",
+        "Value": "Test Cat Facts"
+      },
+      {
+        "Data": "100000000",
+        "Name": "environmentvariable.cat_ConnectorHostUrl",
+        "Value": "catfact.ninja"
+      },
+      {
+        "Data": "100000001",
+        "Name": "environmentvariable.cat_DecimalEnvironmentVariable",
+        "Value": "2"
+      },
+      {
+        "Data": "100000003",
+        "Name": "environmentvariable.cat_JsonEnvironmentVariable",
+        "Value": "{name:alm}"
+      },
+      {
+        "Data": "100000004",
+        "Name": "environmentvariable.cat_shared_sharepointonline_21f63b2d26f043fb85a5c32fc0c65924",
+        "Value": "f7589fad-fdf9-443c-926e-026839a2e9a3"
+      },
+      {
+        "Data": "100000004",
+        "Name": "environmentvariable.cat_shared_sharepointonline_97456712308a4e65aae18bafcd84c81f",
+        "Value": "https://contoso.sharepoint.com/sites/ALMAcceleratorTest"
+      },
+      {
+        "Data": "100000005",
+        "Name": "environmentvariable.cat_ALMAcceleratorSampleSecret",
+        "Value": ""
+      },
+      {
+        "Name": "webhookurl.SampleHook",
+        "Value": null
+      },
+      {
+        "Name": "sdkstep.unsec.2e9fc4e4-ddf0-ed11-8848-6045bd08d866",
+        "Value": null
+      },
+      {
+        "Name": "sdkstep.sec.2e9fc4e4-ddf0-ed11-8848-6045bd08d866",
+        "Value": null
+      },
+      {
+        "Name": "canvasshare.aadGroupId.cat_devopskitsamplecanvasapp_c7ec5",
+        "Value": "393805da-5c67-4cae-a607-2a3323613d4f"
+      },
+      {
+        "Name": "canvasshare.roleName.cat_devopskitsamplecanvasapp_c7ec5",
+        "Value": "CanView"
+      },
+      {
+        "Name": "canvasshare.aadGroupId.cat_devopskitsamplecanvasapp_c7ec5.1",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "canvasshare.roleName.cat_devopskitsamplecanvasapp_c7ec5.1",
+        "Value": "CanEdit"
+      },
+      {
+        "Name": "owner.ownerEmail.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "activateflow.order.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "1"
+      },
+      {
+        "Name": "activateflow.activate.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "activateflow.order.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "3"
+      },
+      {
+        "Name": "activateflow.activate.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "activateflow.order.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "4"
+      },
+      {
+        "Name": "activateflow.activate.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "5"
+      },
+      {
+        "Name": "activateflow.activate.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "5"
+      },
+      {
+        "Name": "activateflow.activate.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "false"
+      },
+      {
+        "Data": "ALM Accelerator Sample Role,AIB Roles",
+        "Name": "groupTeam.1cb85c74-6d4c-41cf-88d9-597a1f5ab152.Test",
+        "Value": "d933199d-b335-452e-b42c-7501cb35d09a"
+      },
+      {
+        "Name": "businessUnit.1cb85c74-6d4c-41cf-88d9-597a1f5ab152.Test",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles.1cb85c74-6d4c-41cf-88d9-597a1f5ab152.Test",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.1cb85c74-6d4c-41cf-88d9-597a1f5ab152",
+        "Value": "Test"
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": "1cd1da56-c65c-ed11-9561-000d3a597d36"
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Data": "",
+        "Name": "groupTeam..",
+        "Value": null
+      },
+      {
+        "Name": "businessUnit..",
+        "Value": null
+      },
+      {
+        "Name": "teamnameskiproles..",
+        "Value": "true"
+      },
+      {
+        "Name": "teamname.",
+        "Value": null
+      },
+      {
+        "Name": "connector.teamname.EnvironmentVariableConnector.b464e249-0bf7-48c0-8350-24476349bac1",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "TriggerSolutionUpgrade",
+        "Value": "false"
+      },
+      {
+        "Name": "UserSettingId",
+        "Value": "9f7873bb-3061-ed11-9562-000d3a354bf5"
+      }
+    ],
+    "VariableGroup": null
+  },
+  {
+    "ApprovalType": null,
+    "BuildName": "deploy-alm accelerator dev-ALMAcceleratorSampleSolution",
+    "BuildTemplate": "/Pipelines/build-deploy-dev-SampleSolution.yml",
+    "DeploymentEnvironmentName": "ALM Accelerator Dev",
+    "DeploymentEnvironmentUrl": "https://contoso-dev.crm.dynamics.com/",
+    "EnvironmentUrl": "https://contoso-dev.crm.dynamics.com/",
+    "ServiceConnectionName": null,
+    "StepType": 809060000,
+    "UserSettings": [
+      {
+        "Data": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "Name": "connectionreference.cat_CDS_Current",
+        "Value": "e3217bb6f9594d379ddc27eef8d5a325"
+      },
+      {
+        "Name": "connectionreference.user.cat_CDS_Current",
+        "Value": "3b8bd16c-e11b-408a-aae3-91409c286939"
+      },
+      {
+        "Name": "connectionreference.shared.cat_CDS_Current",
+        "Value": "true"
+      },
+      {
+        "Data": "/providers/Microsoft.PowerApps/apis/shared_office365",
+        "Name": "connectionreference.cat_sharedoffice365_4ee46",
+        "Value": "f9b029e535964af8a1e31fcd120163bc"
+      },
+      {
+        "Name": "connectionreference.user.cat_sharedoffice365_4ee46",
+        "Value": "3b8bd16c-e11b-408a-aae3-91409c286939"
+      },
+      {
+        "Name": "connectionreference.shared.cat_sharedoffice365_4ee46",
+        "Value": "true"
+      },
+      {
+        "Data": "100000000",
+        "Name": "environmentvariable.cat_TextEnvironmentVariable",
+        "Value": "Dev Cat Facts"
+      },
+      {
+        "Data": "100000000",
+        "Name": "environmentvariable.cat_ConnectorHostUrl",
+        "Value": "catfact.ninja"
+      },
+      {
+        "Data": "100000001",
+        "Name": "environmentvariable.cat_DecimalEnvironmentVariable",
+        "Value": "1"
+      },
+      {
+        "Data": "100000003",
+        "Name": "environmentvariable.cat_JsonEnvironmentVariable",
+        "Value": "{\"test\": \"test\"}"
+      },
+      {
+        "Data": "100000004",
+        "Name": "environmentvariable.cat_shared_sharepointonline_21f63b2d26f043fb85a5c32fc0c65924",
+        "Value": "f7589fad-fdf9-443c-926e-026839a2e9a3"
+      },
+      {
+        "Data": "100000004",
+        "Name": "environmentvariable.cat_shared_sharepointonline_97456712308a4e65aae18bafcd84c81f",
+        "Value": "https://contoso.sharepoint.com/sites/ALMAcceleratorTest"
+      },
+      {
+        "Data": "100000005",
+        "Name": "environmentvariable.cat_ALMAcceleratorSampleSecret",
+        "Value": null
+      },
+      {
+        "Name": "webhookurl.SampleHook",
+        "Value": null
+      },
+      {
+        "Name": "sdkstep.unsec.2e9fc4e4-ddf0-ed11-8848-6045bd08d866",
+        "Value": null
+      },
+      {
+        "Name": "sdkstep.sec.2e9fc4e4-ddf0-ed11-8848-6045bd08d866",
+        "Value": null
+      },
+      {
+        "Name": "canvasshare.aadGroupId.cat_devopskitsamplecanvasapp_c7ec5",
+        "Value": ""
+      },
+      {
+        "Name": "canvasshare.roleName.cat_devopskitsamplecanvasapp_c7ec5",
+        "Value": "CanView"
+      },
+      {
+        "Name": "owner.ownerEmail.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": ""
+      },
+      {
+        "Name": "flow.sharing.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.activateas.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "1"
+      },
+      {
+        "Name": "activateflow.activate.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": ""
+      },
+      {
+        "Name": "flow.sharing.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.activateas.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "2"
+      },
+      {
+        "Name": "activateflow.activate.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": ""
+      },
+      {
+        "Name": "flow.sharing.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.activateas.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "3"
+      },
+      {
+        "Name": "activateflow.activate.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": ""
+      },
+      {
+        "Name": "flow.sharing.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.activateas.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "4"
+      },
+      {
+        "Name": "activateflow.activate.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": ""
+      },
+      {
+        "Name": "flow.sharing.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.activateas.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "5"
+      },
+      {
+        "Name": "activateflow.activate.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "true"
+      },
+      {
+        "Name": "connector.teamname.EnvironmentVariableConnector.b464e249-0bf7-48c0-8350-24476349bac1",
+        "Value": ""
+      },
+      {
+        "Name": "TriggerSolutionUpgrade",
+        "Value": "false"
+      },
+      {
+        "Name": "UserSettingId",
+        "Value": "50a9d1df-3ace-ed11-b597-000d3a354bf5"
+      }
+    ],
+    "VariableGroup": null
+  },
+  {
+    "ApprovalType": 809060000,
+    "BuildName": "deploy-prod-ALMAcceleratorSampleSolution",
+    "BuildTemplate": "/Pipelines/build-deploy-prod-SampleSolution.yml",
+    "DeploymentEnvironmentName": "Prod",
+    "DeploymentEnvironmentUrl": "https://contoso-prod.crm.dynamics.com/",
+    "EnvironmentUrl": "https://contoso-dev.crm.dynamics.com/",
+    "ServiceConnectionName": null,
+    "StepType": 809060001,
+    "UserSettings": [
+      {
+        "Data": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "Name": "connectionreference.cat_CDS_Current",
+        "Value": "545e0cf12d8a45ea97761670e793bf6e"
+      },
+      {
+        "Name": "connectionreference.user.cat_CDS_Current",
+        "Value": "3b8bd16c-e11b-408a-aae3-91409c286939"
+      },
+      {
+        "Name": "connectionreference.shared.cat_CDS_Current",
+        "Value": "false"
+      },
+      {
+        "Data": "/providers/Microsoft.PowerApps/apis/shared_office365",
+        "Name": "connectionreference.cat_sharedoffice365_4ee46",
+        "Value": "c2f9c49ff2f54e5987597305966e2017"
+      },
+      {
+        "Name": "connectionreference.user.cat_sharedoffice365_4ee46",
+        "Value": "3b8bd16c-e11b-408a-aae3-91409c286939"
+      },
+      {
+        "Name": "connectionreference.shared.cat_sharedoffice365_4ee46",
+        "Value": "false"
+      },
+      {
+        "Data": "100000000",
+        "Name": "environmentvariable.cat_TextEnvironmentVariable",
+        "Value": "Prod Cat Facts"
+      },
+      {
+        "Data": "100000000",
+        "Name": "environmentvariable.cat_ConnectorHostUrl",
+        "Value": "catfact.ninja"
+      },
+      {
+        "Data": "100000001",
+        "Name": "environmentvariable.cat_DecimalEnvironmentVariable",
+        "Value": "3"
+      },
+      {
+        "Data": "100000003",
+        "Name": "environmentvariable.cat_JsonEnvironmentVariable",
+        "Value": "{name;cat}"
+      },
+      {
+        "Data": "100000004",
+        "Name": "environmentvariable.cat_shared_sharepointonline_21f63b2d26f043fb85a5c32fc0c65924",
+        "Value": "f7589fad-fdf9-443c-926e-026839a2e9a3"
+      },
+      {
+        "Data": "100000004",
+        "Name": "environmentvariable.cat_shared_sharepointonline_97456712308a4e65aae18bafcd84c81f",
+        "Value": "https://contoso.sharepoint.com/sites/ALMAcceleratorTest"
+      },
+      {
+        "Data": "100000005",
+        "Name": "environmentvariable.cat_ALMAcceleratorSampleSecret",
+        "Value": ""
+      },
+      {
+        "Name": "webhookurl.SampleHook",
+        "Value": null
+      },
+      {
+        "Name": "sdkstep.unsec.2e9fc4e4-ddf0-ed11-8848-6045bd08d866",
+        "Value": null
+      },
+      {
+        "Name": "sdkstep.sec.2e9fc4e4-ddf0-ed11-8848-6045bd08d866",
+        "Value": null
+      },
+      {
+        "Name": "canvasshare.aadGroupId.cat_devopskitsamplecanvasapp_c7ec5",
+        "Value": "393805da-5c67-4cae-a607-2a3323613d4f"
+      },
+      {
+        "Name": "canvasshare.roleName.cat_devopskitsamplecanvasapp_c7ec5",
+        "Value": "CanView"
+      },
+      {
+        "Name": "canvasshare.aadGroupId.cat_devopskitsamplecanvasapp_c7ec5.1",
+        "Value": "e005c95a-8363-4d6f-ad19-d950875e3199"
+      },
+      {
+        "Name": "canvasshare.roleName.cat_devopskitsamplecanvasapp_c7ec5.1",
+        "Value": "CanView"
+      },
+      {
+        "Name": "owner.ownerEmail.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "activateflow.order.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "1"
+      },
+      {
+        "Name": "activateflow.activate.AppTitle.71cc728c-2487-eb11-a812-000d3a8fe6a3",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "activateflow.order.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "3"
+      },
+      {
+        "Name": "activateflow.activate.GetEnvironmentVariableValues.16a25ccc-8b7f-ec11-8d21-0022482cfe1b",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "activateflow.order.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "4"
+      },
+      {
+        "Name": "activateflow.activate.LikeQuote.90d90640-11bc-ec11-983f-0022483403a3",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "5"
+      },
+      {
+        "Name": "activateflow.activate.EmailQuote.a4c44986-14d6-ec11-a7b5-000d3a1c0439",
+        "Value": "true"
+      },
+      {
+        "Name": "owner.ownerEmail.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "Michaelp@contoso.onmicrosoft.com"
+      },
+      {
+        "Name": "flow.sharing.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "activateflow.activateas.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": ""
+      },
+      {
+        "Name": "activateflow.order.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "5"
+      },
+      {
+        "Name": "activateflow.activate.SÆmpleØærligforsøk.37443c82-d03d-ed11-9db0-0022482e56be",
+        "Value": "false"
+      },
+      {
+        "Name": "connector.teamname.EnvironmentVariableConnector.b464e249-0bf7-48c0-8350-24476349bac1",
+        "Value": "Pctools-almdev-sg"
+      },
+      {
+        "Name": "TriggerSolutionUpgrade",
+        "Value": "false"
+      },
+      {
+        "Name": "UserSettingId",
+        "Value": "51cdfee0-3061-ed11-9562-000d3a32af20"
+      }
+    ],
+    "VariableGroup": null
+  }
+]

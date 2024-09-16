@@ -3,8 +3,8 @@ stages:
   displayName: 'Deploy to Environment'
   jobs:
   - deployment: 
-    pool: 
-      vmImage: 'windows-2022'
+    pool:
+      vmImage: 'windows-latest'
     environment: '$(EnvironmentName)'
     strategy:
       runOnce:

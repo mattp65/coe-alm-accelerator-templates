@@ -11,13 +11,10 @@ parameters:
   type: string
 - name: solutionName
   type: string
+- name: buildType
+  type: string
 
-steps:  
-# Checkout Pipelines
-- checkout: self
-  path: 'PipelineUtils'
-  displayName: 'Checkout Pipeline Branch'
-
+steps:
 # Checkout our Branch
 - checkout: git://${{parameters.project}}/${{parameters.repo}}@${{parameters.branch}}
   displayName: 'Checkout Source Branch'
@@ -25,19 +22,23 @@ steps:
 # Get the solution package from artifact uploaded by the build pipeline
 - template: build-Solution.yml
   parameters:
-    buildType: 'Unmanaged'
+    buildType: ${{parameters.buildType}}
     serviceConnectionName: ${{parameters.serviceConnectionName}}
     serviceConnectionUrl: ${{parameters.serviceConnectionUrl}}
     solutionName: ${{parameters.solutionName}}
+    repositoryName: ${{parameters.repo}}
+    skipSolutionVersioning: 'true'
 
-- pwsh: |
-   Get-ChildItem -Path "$(Build.ArtifactStagingDirectory)" -Filter "${{parameters.solutionName}}*.zip" | 
-   ForEach-Object {
-       If (-not $_.FullName.Contains("_managed")) 
-       { 
-         $unmanagedSolutionPath = $_.FullName 
-       }
-   }
-   Write-Host "##vso[task.setVariable variable=UnmanagedSolutionPath]$unmanagedSolutionPath"
-   Write-Host $unmanagedSolutionPath
-  displayName: 'Get unmanaged solution zip path'
+
+# Moved this logic to deploy-Solution.yml
+#- pwsh: |
+#   Get-ChildItem -Path "$(Build.ArtifactStagingDirectory)" -Filter "${{parameters.solutionName}}*.zip" | 
+#   ForEach-Object {
+#       If (-not $_.FullName.Contains("_managed")) 
+#       { 
+#         $unmanagedSolutionPath = $_.FullName 
+#       }
+#   }
+#   Write-Host "##vso[task.setVariable variable=UnmanagedSolutionPath]$unmanagedSolutionPath"
+#   Write-Host $unmanagedSolutionPath
+#  displayName: 'Get unmanaged solution zip path'

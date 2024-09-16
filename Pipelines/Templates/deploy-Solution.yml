@@ -22,9 +22,24 @@ parameters:
   default: 'true'
 
 steps:
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.tool-installer.PowerPlatformToolInstaller@2
+  displayName: 'Install Power Platform Build Tools'
+  condition: and(succeeded(), eq('${{parameters.skipBuildToolsInstaller}}', 'false'))
+
+# Use set-connection-variables task to get values from AzDO Service Connection to be used in scripts that don't use tasks
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.set-connection-variables.PowerPlatformSetConnectionVariables@2
+  displayName: 'Set Connection Variables'
+  name: connectionVariables
+  inputs:
+    authenticationType: 'PowerPlatformSPN'
+    PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
+
 - template: set-spn-token.yml
   parameters:
     serviceConnection: ${{parameters.serviceConnectionUrl}}
+    tenantId: $(connectionVariables.BuildTools.TenantId)
+    clientId: $(connectionVariables.BuildTools.ApplicationId)
+    clientSecret: $(connectionVariables.BuildTools.ClientSecret)
 
 - pwsh: |
     . "$env:POWERSHELLPATH/load-save-pipeline-parameters.ps1"
@@ -44,11 +59,7 @@ steps:
     key:  restoremodules | "$(powerPlatformToolsSubPath)" | $(Pipeline.Workspace)/PipelineUtils/Pipelines/Templates/install-powershell-modules.yml
     path: $(powerPlatformToolsPath)
     cacheHitVar: powerPlatformToolsPath_IsCached
-  condition: and(succeeded(), eq('${{parameters.cacheEnabled}}', 'true'))
-
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.tool-installer.PowerPlatformToolInstaller@2
-  displayName: 'Install Power Platform Build Tools'
-  condition: and(succeeded(), eq('${{parameters.skipBuildToolsInstaller}}', 'false'))
+  condition: and(succeeded(), and(eq('${{parameters.cacheEnabled}}', 'true'), ne(variables['CacheEnabled'], 'false')))
 
 - template: install-powershell-modules.yml
 
@@ -60,7 +71,6 @@ steps:
 # Other tasks, in this pipeline need to know if the solution already exists. Setting it for future use.
 - template: set-solution-exists.yml
   parameters:
-    serviceConnection: '${{parameters.serviceConnectionUrl}}'
     solutionName: '${{parameters.solutionName}}'
 
 # Get the solution package from artifact uploaded by the build pipeline
@@ -79,27 +89,27 @@ steps:
 # Set paths to deployment settings
 - template: set-deployment-configuration-paths.yml
   parameters:
-    configPath: $(ArtifactDropPath)
-    environmentName: ${{parameters.environmentName}}
+    configPath: '$(ArtifactDropPath)'
+    environmentName: '${{parameters.environmentName}}'
 
 # Update any deploymentSettings.json via FileTransform task. This task will replace values in a JSON file based on their path. See https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/transforms-variable-substitution?view=azure-devops&tabs=Classic#jsonvarsubs
 - task: FileTransform@1
   displayName: 'File Transformation: deploymentSettings.json'
   inputs:
-    folderPath: '$(ArtifactDropPath)'
-    targetFiles: '*deploymentSettings*.json'
+    folderPath: '$(Pipeline.Workspace)'
+    targetFiles: '**\*deploymentSettings*.json'
     fileType: json
   condition: and(succeeded(), or(ne(variables['DeploymentSettingsPath'], ''), ne(variables['CustomDeploymentSettingsPath'], '')))
 
 # Third party task to replace tokens in files. The FileTransform above replaces JSON tokens based on their path as opposed to replacing text tokens in a file which can be more error prone in some cases.
 # If you aren't using this task it can be safely removed or disabled by setting enabled: false. Sample token: #{VariableNameToReplace}#
-- task: qetza.replacetokens.replacetokens-task.replacetokens@3
+- task: qetza.replacetokens.replacetokens-task.replacetokens@6
   displayName: 'Replace Tokens: deploymentSettings.json'
   inputs:
-    rootDirectory: '$(ArtifactDropPath)'
-    targetFiles: '*deploymentSettings*.json'
-    actionOnMissing: 'silently continue'
-    writeBOM: false
+    root: '$(Pipeline.Workspace)'
+    sources: '**\*[dD]eploymentSettings*.json'
+    missingVarLog: 'off'
+    addBOM: false
     encoding: 'utf-8'
     defaultValue: ''
   condition: and(succeeded(), or(ne(variables['DeploymentSettingsPath'], ''), ne(variables['CustomDeploymentSettingsPath'], '')))
@@ -107,37 +117,66 @@ steps:
 
 - template: Hooks\deploy-solution-import-pre-hook.yml
 
+- pwsh: |
+   . "$env:POWERSHELLPATH/build-deploy-solution-functions.ps1"
+    Get-unmanaged-solution-zip-path "$(ArtifactDropPath)" "${{parameters.solutionName}}"
+  displayName: 'Get unmanaged solution zip path'
+  condition: and(succeeded(), eq(variables['IsUnmanaged'], 'true'))
+
 # If called from import-unmanaged-to-dev-environment.yml, this task will run to deploy an unmanaged solution
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.import-solution.PowerPlatformImportSolution@2
+  displayName: 'Import Unmanaged Solution and no activate-plugins'
+  inputs:
+    authenticationType: PowerPlatformSPN
+    PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
+    SolutionInputFile: '$(UnmanagedSolutionPath)'
+    ActivatePlugins: false
+    UseDeploymentSettingsFile: $(UseDeploymentSettings)
+    DeploymentSettingsFile: $(DeploymentSettingsPath)
+    MaxAsyncWaitTime: 120
+  condition: and(succeeded(),eq(variables['ActivateFlowsOnTheSolutionImport'],'false'), ne(variables['SkipSolutionImport'],'true'), eq(variables['IsUnmanaged'], 'true'))
+
+  # If called from import-unmanaged-to-dev-environment.yml, this task will run to deploy an unmanaged solution
 - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.import-solution.PowerPlatformImportSolution@2
   displayName: 'Import Unmanaged Solution'
   inputs:
     authenticationType: PowerPlatformSPN
     PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
     SolutionInputFile: '$(UnmanagedSolutionPath)'
-    PublishWorkflows: true
+    ActivatePlugins: true
     UseDeploymentSettingsFile: $(UseDeploymentSettings)
     DeploymentSettingsFile: $(DeploymentSettingsPath)
-  condition: and(succeeded(), eq('${{parameters.importUnmanaged}}', 'true'))
+    MaxAsyncWaitTime: 120
+  condition: and(succeeded(), ne(variables['ActivateFlowsOnTheSolutionImport'],'false'), ne(variables['SkipSolutionImport'],'true'), eq(variables['IsUnmanaged'], 'true'))
 
 - pwsh: |
-    $managedSolutionPath = ''
-    $artifactDropPath = "$(Pipeline.Workspace)/buildPipeline/drop/"
-    #Attempt to find the managed solution in the build pipeline drop if build and deploy are seperate pipelines
-    Get-ChildItem -Path "$(ArtifactDropPath)" -Filter "${{parameters.solutionName}}*.zip" | 
-    ForEach-Object {
-        If ($_.FullName.Contains("_managed")) 
-        { 
-            $managedSolutionPath = $_.FullName 
-        }
-    }
-    Write-Host "##vso[task.setVariable variable=ManagedSolutionPath]$managedSolutionPath"
+   . "$env:POWERSHELLPATH/build-deploy-solution-functions.ps1"
+    Get-Managed-Solution-Zip-Path "$(ArtifactDropPath)" "${{parameters.solutionName}}"
 
     #Set TriggerSolutionUpgrade to false if the variable is not set
     if('$(TriggerSolutionUpgrade)'.Contains("TriggerSolutionUpgrade")) {
         Write-Host "##vso[task.setVariable variable=TriggerSolutionUpgrade]false"
     }
   displayName: 'Get managed solution zip path'
-  condition: and(succeeded(), ne('${{parameters.importUnmanaged}}', 'true'))
+  condition: and(succeeded(),ne(variables['SkipSolutionImport'],'true'), ne(variables['IsUnmanaged'], 'true'))
+
+- template: disable-flows.yml
+  parameters:
+    solutionName: '${{parameters.solutionName}}'
+
+# If the TriggerSolutionUpgrade variable is false, then import the solution as an Update
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.import-solution.PowerPlatformImportSolution@2
+  displayName: 'Import Managed Solution as Update and no activate-plugins'
+  inputs:
+    authenticationType: PowerPlatformSPN
+    PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
+    SolutionInputFile: $(ManagedSolutionPath)
+    ActivatePlugins: false    
+    OverwriteUnmanagedCustomizations: ${{parameters.overwriteUnmanagedCustomizations}}
+    UseDeploymentSettingsFile: $(UseDeploymentSettings)
+    DeploymentSettingsFile: $(DeploymentSettingsPath)
+    MaxAsyncWaitTime: 120
+  condition: and(succeeded(),eq(variables['ActivateFlowsOnTheSolutionImport'],'false'),ne(variables['SkipSolutionImport'],'true'), ne(variables['IsUnmanaged'], 'true'), or(eq(variables['TriggerSolutionUpgrade'], 'false'), eq(variables['SolutionExists'], 'false')))
 
 # If the TriggerSolutionUpgrade variable is false, then import the solution as an Update
 - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.import-solution.PowerPlatformImportSolution@2
@@ -146,45 +185,51 @@ steps:
     authenticationType: PowerPlatformSPN
     PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
     SolutionInputFile: $(ManagedSolutionPath)
-    PublishWorkflows: true
+    ActivatePlugins: true    
     OverwriteUnmanagedCustomizations: ${{parameters.overwriteUnmanagedCustomizations}}
     UseDeploymentSettingsFile: $(UseDeploymentSettings)
     DeploymentSettingsFile: $(DeploymentSettingsPath)
-  condition: and(succeeded(), ne('${{parameters.importUnmanaged}}', 'true'), or(eq(variables['TriggerSolutionUpgrade'], 'false'), eq(variables['SolutionExists'], 'false')))
+    MaxAsyncWaitTime: 120
+  condition: and(succeeded(), ne(variables['ActivateFlowsOnTheSolutionImport'],'false'), ne(variables['SkipSolutionImport'],'true'), ne(variables['IsUnmanaged'], 'true'), or(eq(variables['TriggerSolutionUpgrade'], 'false'), eq(variables['SolutionExists'], 'false')))
 
-# If the TriggerSolutionUpgrade variable is true, then import the solution as an Upgrade, staging it as a holding solution, so we can apply a solution Upgrade.
+# If the TriggerSolutionUpgrade variable is true, then import the solution as an Upgrade, along with 'StageAndUpgrade' upgrade happens immediately after the import.
+# Doing this will ensure that items removed from the solution in development are also removed from the solution in the target environment after the Upgrade is applied.
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.import-solution.PowerPlatformImportSolution@2
+  displayName: 'Import Managed Solution as Upgrade and no activate-plugins'
+  inputs:
+    authenticationType: PowerPlatformSPN
+    PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
+    SolutionInputFile: $(ManagedSolutionPath)
+    OverwriteUnmanagedCustomizations: ${{parameters.overwriteUnmanagedCustomizations}}
+    UseDeploymentSettingsFile: $(UseDeploymentSettings)
+    DeploymentSettingsFile: $(DeploymentSettingsPath)
+    ActivatePlugins: false
+    MaxAsyncWaitTime: 120
+    StageAndUpgrade: true
+  condition: and(succeeded(), eq(variables['ActivateFlowsOnTheSolutionImport'],'false'), ne(variables['SkipSolutionImport'],'true'), ne(variables['IsUnmanaged'], 'true'), eq(variables['TriggerSolutionUpgrade'], 'true'), eq(variables['SolutionExists'], 'true'))
+
+# If the TriggerSolutionUpgrade variable is true, then import the solution as an Upgrade, along with 'StageAndUpgrade' upgrade happens immediately after the import.
 # Doing this will ensure that items removed from the solution in development are also removed from the solution in the target environment after the Upgrade is applied.
 - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.import-solution.PowerPlatformImportSolution@2
   displayName: 'Import Managed Solution as Upgrade'
   inputs:
     authenticationType: PowerPlatformSPN
     PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
-    SolutionInputFile: $(ManagedSolutionPath)
-    HoldingSolution: true
+    SolutionInputFile: $(ManagedSolutionPath)    
     OverwriteUnmanagedCustomizations: ${{parameters.overwriteUnmanagedCustomizations}}
     UseDeploymentSettingsFile: $(UseDeploymentSettings)
     DeploymentSettingsFile: $(DeploymentSettingsPath)
-  condition: and(succeeded(), ne('${{parameters.importUnmanaged}}', 'true'), eq(variables['TriggerSolutionUpgrade'], 'true'), eq(variables['SolutionExists'], 'true'))
-
-# NOTE: Sometimes you need to perform intermediary steps between staging the upgrade and applying it.  
-# An example would be moving data from one entity to another before deleting the entity.
-# You would add steps to your pipeline here to accomplish this. 
-
-# If the TriggerSolutionUpgrade variable is true,then apply the solution Upgrade.
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.apply-solution-upgrade.PowerPlatformApplySolutionUpgrade@2
-  inputs:
-    authenticationType: 'PowerPlatformSPN'
-    PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
-    SolutionName: ${{parameters.solutionName}}
-    AsyncOperation: true
-  condition: and(succeeded(), eq(variables['TriggerSolutionUpgrade'], 'true'), eq(variables['SolutionExists'], 'true'))
+    ActivatePlugins: true
+    MaxAsyncWaitTime: 120
+    StageAndUpgrade: true
+  condition: and(succeeded(),ne(variables['ActivateFlowsOnTheSolutionImport'],'false'),ne(variables['SkipSolutionImport'],'true'), ne(variables['IsUnmanaged'], 'true'), eq(variables['TriggerSolutionUpgrade'], 'true'), eq(variables['SolutionExists'], 'true'))
 
 - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.publish-customizations.PowerPlatformPublishCustomizations@2
   displayName: 'Power Platform Publish Customizations '
   inputs:
     authenticationType: PowerPlatformSPN
     PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
-  condition: and(succeeded(), eq('${{parameters.importUnmanaged}}', 'true'))
+  condition: and(succeeded(),ne(variables['SkipSolutionImport'],'true'), eq(variables['IsUnmanaged'], 'true'))
   # Only publish customizations for when importing unmanaged solutions into a dev environment.
 
 # Set deployment variables
@@ -214,7 +259,7 @@ steps:
     variableName: 'outSolutionComponentOwnershipConfiguration'
     deploymentSettingsPath: $(CustomDeploymentSettingsPath)
     deploymentSettingsNode: 'SolutionComponentOwnershipConfiguration'
-    displayName: 'Retrieve Solution Component Onwership Config for Deploy'
+    displayName: 'Retrieve Solution Component Ownership Config for Deploy'
 
 - template: set-deployment-variable.yml
   parameters:
@@ -222,6 +267,20 @@ steps:
     deploymentSettingsPath: $(DeploymentSettingsPath)
     deploymentSettingsNode: 'ConnectionReferences'
     displayName: 'Retrieve Connection Reference Config for Deploy'
+
+- template: set-deployment-variable.yml
+  parameters:
+    variableName: 'outWebHookUrls'
+    deploymentSettingsPath: $(CustomDeploymentSettingsPath)
+    deploymentSettingsNode: 'WebhookUrls'
+    displayName: 'Retrieve WebHook Urls Config for Deploy'
+
+- template: set-deployment-variable.yml
+  parameters:
+    variableName: 'outSDKMessages'
+    deploymentSettingsPath: $(CustomDeploymentSettingsPath)
+    deploymentSettingsNode: 'SDKMessages'
+    displayName: 'Retrieve SDK Messages Config for Deploy'
 
 - template: set-deployment-variable.yml
   parameters:
@@ -244,15 +303,35 @@ steps:
     serviceConnection: '${{parameters.serviceConnectionUrl}}'
     aadGroupTeamConfiguration: '$(outAadGroupTeamConfiguration)'
 
+- template: import-configuration-migration-data.yml
+  parameters:
+    serviceConnection: '${{parameters.serviceConnectionName}}'
+    environmentName: '${{parameters.environmentName}}'
+
 - template: share-canvas-app-with-aad-group.yml
   parameters:
     serviceConnection: '${{parameters.serviceConnectionUrl}}'
     aadGroupCanvasConfiguration: '$(outAadGroupCanvasConfiguration)'
 
+- template: consent-canvas-app.yml
+  parameters:
+    serviceConnection: '${{parameters.serviceConnectionUrl}}'
+    solutionName: ${{parameters.solutionName}}
+
 - template: update-solution-component-ownership.yml
   parameters:
     serviceConnection: '${{parameters.serviceConnectionUrl}}'
     solutionComponentOwnershipConfiguration: '$(outSolutionComponentOwnershipConfiguration)'
+
+- template: update-webhook-urls.yml
+  parameters:
+    serviceConnection: '${{parameters.serviceConnectionUrl}}'
+    webHookConfiguration: '$(outWebHookUrls)'
+
+- template: update-sdk-messages.yml
+  parameters:
+    serviceConnection: '${{parameters.serviceConnectionUrl}}'
+    sdkMessageConfiguration: '$(outSDKMessages)'
 
 - template: activate-flows.yml
   parameters:
@@ -261,6 +340,11 @@ steps:
     connectionReferences: '$(outConnectionReferences)'
     solutionComponentOwnershipConfiguration: '$(outSolutionComponentOwnershipConfiguration)'
     activateFlowConfiguration: '$(outActivateFlows)'
+
+- template: canvas-ownership.yml
+  parameters:
+    solutionName: ${{parameters.solutionName}}
+    solutionComponentOwnershipConfiguration: '$(outSolutionComponentOwnershipConfiguration)'
 
 - template: share-flows-with-group-team.yml
   parameters:
@@ -272,11 +356,6 @@ steps:
     serviceConnection: '${{parameters.serviceConnectionUrl}}'
     connectorShareWithGroupTeamConfiguration: '$(outConnectorShareWithGroupTeamConfiguration)'
 
-- template: import-configuration-migration-data.yml
-  parameters:
-    serviceConnection: '${{parameters.serviceConnectionUrl}}'
-    environmentName: '${{parameters.environmentName}}'
-
 - template: run-canvas-tests.yml 
   parameters:
     serviceConnection: '${{parameters.serviceConnectionUrl}}'
@@ -287,21 +366,14 @@ steps:
     makerPortalUrl: '$(TestAutomationMakerPortalUrl)'
     loginMethod: '$(TestAutomationLoginMethod)'
 
-# ALM Accelerator currently supports ALM of single website.
-# PowerPages folder contain one subfolder at depth 1, which is the unpacked WebSite folder.
+- pwsh: |
+      . "$env:POWERSHELLPATH/code-first-functions.ps1"
+      set-pac-tools-path "$(Agent.OS)"
+  displayName: 'Set pac tools path'
+
 - pwsh: |
     . "$env:POWERSHELLPATH/portal-functions.ps1"
-    $websiteName = Get-Website-Name "$(Build.SourcesDirectory)" "$(Build.Repository.Name)" "${{parameters.solutionName}}"
-    echo "##vso[task.setvariable variable=WebsiteName]$websiteName"
-    Write-Host "websiteName - $websiteName"
-  displayName: "Fetch Portal Website Name"
+    Process-and-Upload-Websites "$(Build.SourcesDirectory)" "$(Build.Repository.Name)" "${{parameters.solutionName}}" "${{ parameters.environmentName }}" "$(pacPath)" "${{parameters.serviceConnectionUrl}}" "$(connectionVariables.BuildTools.ApplicationId)" "$(connectionVariables.BuildTools.ClientSecret)" "$(connectionVariables.BuildTools.TenantId)"
+  displayName: "Upload website(s)"
 
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.upload-paportal.PowerPlatformUploadPaportal@2
-  displayName: 'Upload Power Page ${{parameters.solutionName}}'
-  inputs:
-    authenticationType: PowerPlatformSPN
-    PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
-    UploadPath: '$(Build.SourcesDirectory)\$(Build.Repository.Name)\${{parameters.solutionName}}\PowerPages\$(WebsiteName)\'
-    Environment: '${{parameters.serviceConnectionUrl}}'
-  condition: and(succeeded(), ne(variables['WebsiteName'], 'NA'))
 - template: Hooks\deploy-solution-post-hook.yml

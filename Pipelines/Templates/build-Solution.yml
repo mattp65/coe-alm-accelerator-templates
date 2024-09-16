@@ -9,11 +9,40 @@ parameters:
   type: string
 - name: solutionName
   type: string
+- name: skipBuildToolsInstaller
+  type: string
+  default: 'false'
+- name: repositoryName
+  type: string
+  default: 'NA'
+- name: skipSolutionVersioning
+  type: string
+  default: 'false'
 
-steps:  
+steps: 
+- template: set-service-connection-url.yml
+  parameters:
+    serviceConnectionName: '${{parameters.serviceConnectionName}}'
+    serviceConnectionUrl: '${{parameters.serviceConnectionUrl}}'
+
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.tool-installer.PowerPlatformToolInstaller@2
+  displayName: 'Install Power Platform Build Tools'
+  condition: and(succeeded(), eq('${{parameters.skipBuildToolsInstaller}}', 'false'))
+
+# Use set-connection-variables task to get values from AzDO Service Connection to be used in scripts that don't use tasks
+- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.set-connection-variables.PowerPlatformSetConnectionVariables@2
+  displayName: 'Set Connection Variables'
+  name: buildConnectionVariables
+  inputs:
+    authenticationType: 'PowerPlatformSPN'
+    PowerPlatformSPN: '${{parameters.serviceConnectionName}}'
+
 - template: set-spn-token.yml
   parameters:
     serviceConnection: ${{parameters.serviceConnectionUrl}}
+    tenantId: $(buildConnectionVariables.BuildTools.TenantId)
+    clientId: $(buildConnectionVariables.BuildTools.ApplicationId)
+    clientSecret: $(buildConnectionVariables.BuildTools.ClientSecret)
 
 - pwsh: |
     . "$env:POWERSHELLPATH/load-save-pipeline-parameters.ps1"
@@ -25,85 +54,77 @@ steps:
 # Set pipeline vars for tools paths.
 - template: set-tools-paths.yml
     
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.tool-installer.PowerPlatformToolInstaller@2
-  displayName: 'Install Power Platform Build Tools'
-
 - pwsh: |
-    $splitName = "$(Build.Repository.Name)".Split("/")
-    $repoName = $splitName[$splitName.Length - 1]
+    $repoName = ""
+    if('${{parameters.repositoryName}}' -eq 'NA'){
+        $splitName = "$(Build.Repository.Name)".Split("/")
+        $repoName = $splitName[$splitName.Length - 1]
+        Write-Host "Reading Repo from (Build.Repository.Name)"
+    }
+    else{
+        $repoName = '${{parameters.repositoryName}}'
+        Write-Host "Reading Repo from repositoryName parameter"
+    }
     Write-Host "##vso[task.setvariable variable=RepoName]$repoName"
+    Write-Host "Repo Name - $repoName"
   displayName: 'Set Source Repo Name'
   condition: and(succeeded(), ne('${{parameters.buildType}}', 'Unmanaged'))
 
 - template: Hooks\build-solution-manipulate-source-pre-hook.yml
-  
-# Solution version in source control is not used.  Instead, create version at build time from the current build number.
-- pwsh: |
-   Get-ChildItem -Path "$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\SolutionPackage\**\Solution.xml" | 
-   ForEach-Object {
-        (Get-Content $_.FullName) `
-            -replace '<Version>0.0.0.0<\/Version>', '<Version>$(Build.BuildNumber)</Version>' |
-        Out-File $_.FullName
-   }
-  displayName: 'Update Solution XML with Build Number'
-  condition: and(succeeded(), ne('${{parameters.buildType}}', 'Unmanaged'))
 
+- pwsh: |
+      . "$env:POWERSHELLPATH/code-first-functions.ps1"
+      Set-Pac-Tools-Path "$(Agent.OS)"
+  displayName: 'Set pac tools path'
+
+- pwsh: |
+      . "$env:POWERSHELLPATH/code-first-functions.ps1"
+      Invoke-Pac-Authenticate "${{parameters.serviceConnectionUrl}}" "$(buildConnectionVariables.BuildTools.ApplicationId)" "$(buildConnectionVariables.BuildTools.ClientSecret)" "$(buildConnectionVariables.BuildTools.TenantId)" "$(pacPath)"
+  displayName: 'Pac cli and Authenticate'
+
+- pwsh: |
+      . "$env:POWERSHELLPATH/code-first-functions.ps1"
+      Invoke-Restructure-Legacy-Folders '$(Build.ArtifactStagingDirectory)' '$(Build.SourcesDirectory)' '$(RepoName)' '${{parameters.solutionName}}' '$(pacPath)' '${{parameters.serviceConnectionUrl}}' '$(Agent.BuildDirectory)'
+  displayName: 'Restructure legacy folders'
+
+ # Solution version in source control is not used.  Instead, create version at build time from the current build number.
+- pwsh: |
+   $solutionXMLPath = "$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\SolutionPackage\src\Other\Solution.xml"
+    . "$env:POWERSHELLPATH/build-deploy-solution-functions.ps1"
+   Update-Solution-Xml-With-Build-Number "$solutionXMLPath" "$(Build.BuildNumber)"
+  displayName: 'Update Solution XML with Build Number'
+  condition: and(succeeded(), ne('${{parameters.buildType}}', 'Unmanaged'), ne('${{parameters.skipSolutionVersioning}}', 'true'))
+  
 # Before we committed changes, we formatted all json files for readability in source control.  This breaks solution package, so we need to flatten them before packing   
 - pwsh: |
     #When we unpack the solution files, we format the json, but it causes solution import failures so we need to flatten the files
-    Get-ChildItem -Path "$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}" -Recurse -Filter *.json |
-    ForEach-Object {
-        $fileContent = (Get-Content $_.FullName) -join ' '
-        if(-not [string]::IsNullOrWhiteSpace($fileContent)) {
-            Set-Content $_.FullName $fileContent
-        }
-    }
+    $solutionFolderPath = "$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}"
+    . "$env:POWERSHELLPATH/build-deploy-solution-functions.ps1"
+    Invoke-Flatten-JSON-Files "$solutionFolderPath"
   displayName: 'Flatten JSON files'
   enabled: true
 
 # Pack canvas app source files into msapp
 - pwsh: |
-   $agentOS = "$(Agent.OS)"
-   if ($agentOS -eq "Linux") {
-       $pacPath = $env:POWERPLATFORMTOOLS_PACCLIPATH + "/pac_linux/tools"
-       $env:PATH = $env:PATH + ":" + $pacPath #note colon delimeter in path for linux
-   }
-   else {
-       $pacPath = $env:POWERPLATFORMTOOLS_PACCLIPATH + "\pac\tools"
-       $env:PATH = $env:PATH + ";" + $pacPath #note semi-colon delimeter in path for windows
-   }   
-   $solutionSource = "$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}"
-   # We need to keep the source of the canvas app in temp for later use in canvas test automation
-   Copy-Item $solutionSource -Destination "$(Agent.TempDirectory)\${{parameters.solutionName}}" -Recurse -Force
-   Get-ChildItem -Path $solutionSource -Recurse -Filter *_msapp_src | 
-   ForEach-Object {     
-     $unpackedPath = $_.FullName
-     $packedFileName = $unpackedPath.Replace("_msapp_src", ".msapp")
-     if(!(Test-Path $packedFileName)) {
-        #Temporarily unpacking with latest version of Power Apps Language Tooling
-        Write-Host "Packing cavas app source files into msapp"
-       pac canvas pack --sources $unpackedPath --msapp $packedFileName
-     }
-     else {
-        Write-Host "$packedFileName already exists. Skipping packing of the app."
-     }
-
-    # We need to copy the old folder structure for canvas app source into the new
-    # folder structure used by "pac solution pack --processCanvasApps" which is what
-    # the Azure DevOps task uses
-    $newCanvasAppSourceDirectory = $packedFileName.Split("\")[-1].Replace("_DocumentUri.msapp","")
-    Copy-Item -Path $unpackedPath -Destination "$solutionSource\SolutionPackage\CanvasApps\src\$newCanvasAppSourceDirectory" -Recurse -Force
-    Remove-Item -Path $unpackedPath -Recurse
-   }
+   . "$env:POWERSHELLPATH/build-deploy-solution-functions.ps1"
+    Invoke-Process-Old-Canvas-Code-Folder-Structure "$(Build.SourcesDirectory)" "$(RepoName)" "${{parameters.solutionName}}" "$(Agent.OS)" "$(Agent.TempDirectory)"
   displayName: 'Detect and process old canvas code folder structure for backwards compatibility'
+  workingDirectory: $(PowerShellPath)
+  enabled: true
+
+# Rebuid canvas app source files into msapp as .cdsproj is not rebuilding the canvas src
+- pwsh: |
+   . "$env:POWERSHELLPATH/build-deploy-solution-functions.ps1"
+    Invoke-Repack-Canvas-Apps "$(Build.SourcesDirectory)" "$(RepoName)" "${{parameters.solutionName}}" "$(Agent.OS)" "$(Agent.TempDirectory)"
+  displayName: 'Rebuid canvas app source files into msapp as .cdsproj is not rebuilding the canvas src'
   workingDirectory: $(PowerShellPath)
   enabled: true
   
 # Set paths to deployment settings
 - template: set-deployment-configuration-paths.yml
   parameters:
-    configPath: $(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\config\
-    environmentName: $(EnvironmentName)
+    configPath: '$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\config\'
+    environmentName: '$(EnvironmentName)'
 
 # We'll store configuration data as artifacts on the build pipeline to be used during deployment. This includes configuration data created via Configuration data migration tool and deploymentSettings.json and customDeploymentSettings.json 
 - pwsh: |
@@ -113,13 +134,13 @@ steps:
   
 # Third party task to replace tokens in files. The FileTransform above replaces JSON tokens based on their path as opposed to replacing text tokens in a file which can be more error prone in some cases.
 # If you aren't using this task it can be safely removed or disabled by setting enabled: false. Sample token: #{VariableNameToReplace}#
-- task: qetza.replacetokens.replacetokens-task.replacetokens@3
+- task: qetza.replacetokens.replacetokens-task.replacetokens@6
   displayName: 'Replace Tokens: deploymentSettings.json'
   inputs:
-    rootDirectory: $(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\config\
-    targetFiles: '*deploymentSettings*.json'
-    actionOnMissing: 'silently continue'
-    writeBOM: false
+    root: $(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\config\
+    sources: '**\*[dD]eploymentSettings*.json'
+    missingVarLog: 'off'
+    addBOM: false
     encoding: 'utf-8'
     defaultValue: ''
   condition: and(succeeded(), or(ne(variables['DeploymentSettingsPath'], ''), ne(variables['CustomDeploymentSettingsPath'], '')))
@@ -154,14 +175,79 @@ steps:
 
 - template: Hooks\build-solution-pack-pre-hook.yml
 
-#Pack the solution based on the build type parameter (Unmanaged, Managed or Both)
-- task: microsoft-IsvExpTools.PowerPlatform-BuildTools.pack-solution.PowerPlatformPackSolution@2
-  displayName: 'Pack Solutions (Unmanaged and/or Managed)'
+# Validate flows only if the "validateFlows" variable passed as 'true'
+# Variable can either be passed from deployment pipelines or from Variable Group.
+- pwsh: |
+    . "$env:POWERSHELLPATH/flow-xml-validation.ps1"
+    $invalidFlows =  Validate-And-Fetch-Invalid-Flows '$(Build.SourcesDirectory)' '$(RepoName)' '${{parameters.solutionName}}'
+    if($null -ne $invalidFlows){
+        Write-Host "##vso[task.logissue type=warning]Solution you are trying to deploy has following invalid flows ($invalidFlows). Exiting the deployment."
+        throw
+    }
+  displayName: 'Validate Flows'
+  condition: and(succeeded(), ne(variables['TriggerFlowValidation'],''), eq(variables['TriggerFlowValidation'],'true'))
+
+# Add code first projects(csproj,pcfproj) to cdsproj
+- pwsh: |
+      . "$env:POWERSHELLPATH/code-first-functions.ps1"
+      Invoke-Check-Code-First-Components '$(Build.SourcesDirectory)' '$(RepoName)' '${{parameters.solutionName}}'
+  displayName: 'Check codefirst components existence'
+
+- pwsh: |
+      . "$env:POWERSHELLPATH/code-first-functions.ps1"
+      Add-Codefirst-Projects-To-Cdsproj '$(Build.SourcesDirectory)' '$(RepoName)' '${{parameters.solutionName}}' '$(pacPath)' '$(PluginSNK)'
+  displayName: 'Add project references to cdsproject'
+
+  # Runs NPM Install against all PCF projects
+- pwsh: |
+      . "$env:POWERSHELLPATH/code-first-functions.ps1"
+      Invoke-Pcf-Projects-Install-Npm '$(Build.SourcesDirectory)' '$(RepoName)'
+  displayName: 'Install npm - pcf projects'
+
+# Build Cdsproj file which generates the solution zip files
+- task: VSBuild@1
   inputs:
-    SolutionSourceFolder: $(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\SolutionPackage
-    SolutionOutputFile: '$(Build.ArtifactStagingDirectory)\${{parameters.solutionName}}_$(Build.BuildNumber).zip'
-    SolutionType: ${{parameters.buildType}}
-    ProcessCanvasApps: $(localProcessCanvasApps)
+    solution: '$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\SolutionPackage\${{parameters.solutionName}}.cdsproj'
+    msbuildArgs: '/t:build /restore'    
+  displayName: 'Build cdsproject'  
+
+# Run the unit test cases
+- template: build-run-unit-test-projects.yml
+  parameters:
+    buildSourceDirectory: '$(Build.SourcesDirectory)'
+    repo: '$(RepoName)'
+    solutionName: '${{parameters.solutionName}}'
+
+# Verbose purpose to make sure cdsproj buiild generated required files
+- pwsh: |
+    $sourceDirectory  = "$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\SolutionPackage\bin\Debug\*"
+    Get-ChildItem "$sourceDirectory" -Recurse
+  displayName: 'Display Bin Files' 
+
+  # Using cdsproj approach Solutions gets created post building cdsproj file.
+  # Copy the Solution from bin to ArtifactStagingDirectory
+- pwsh: |
+    #$sourceDirectory  = "$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\SolutionPackage\${{parameters.solutionName}}\bin\Debug\*"
+    $sourceDirectory  = "$(Build.SourcesDirectory)\$(RepoName)\${{parameters.solutionName}}\SolutionPackage\bin\Debug\*"
+    $destinationDirectory = "$(Build.ArtifactStagingDirectory)"
+    If(Test-Path "$sourceDirectory")
+    {
+        Copy-item -Force -Recurse -Verbose "$sourceDirectory" -Destination $destinationDirectory
+    }
+    else
+    {
+        Write-Host "Folder unavailable - $sourceDirectory"
+    }
+  displayName: 'Copy cdsproj solutions to ArtifactStagingDirectory'
+  
+- pwsh: |
+      . "$env:POWERSHELLPATH/code-first-functions.ps1"
+      Invoke-Append-Version-To-Solutions '$(Build.ArtifactStagingDirectory)' '${{parameters.solutionName}}' '$(Build.BuildNumber)'
+  displayName: 'Append version to solutions'  
+
+- pwsh: |
+    Get-ChildItem "$(Build.ArtifactStagingDirectory)"
+  displayName: 'Print ArtifactStagingDirectory Files'
 
 #Run Solution Checker against our solution. This is currently only triggered for pipelines that trigger for Pull Requests
 - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.checker.PowerPlatformChecker@2

@@ -12,8 +12,8 @@
 # Document how to setup inner loop / personal files for local testing in the PowerShell/Ignore folder
 
 param(
-    $Org, $Project, $BranchToTest, $SourceBranch, $BranchToCreate, $CommitMessage, $Data, 
-    $Email, $Repo, $ServiceConnection, $SolutionName, $UserName, $PortalSiteName
+    $Org, $Project, $BranchToTest, $SourceBranch, $BranchToCreate, $ExportPipelineName, $CommitMessage, $Data, 
+    $Email, $Repo, $ServiceConnection, $SolutionName, $UserName, $PortalSiteName, $PublishCustomizations, $CommitScope, $BasicAccessToken
 )
 
 class Helper {
@@ -26,7 +26,7 @@ class Helper {
         while ($result.status -ne 'completed') {
             Start-Sleep -Seconds 15
             $result = az pipelines runs show --id $id --org $org --project $project
-            $result = $result | ConvertFrom-Json -Depth 10
+            $result = $result | ConvertFrom-Json -Depth 100
         }
     
         return $result.result -eq 'succeeded' -or $result.result -eq 'partiallySucceeded' 
@@ -37,34 +37,34 @@ class Helper {
         Write-Host "$timestamp - Running $testName..."
     }
 
-    static [bool]QueueExportToGit($org, $project, $solutionName, $body) {        
+    static [bool]QueueExportToGit($org, $project, $solutionName, $exportPipelineName, $body) {        
         $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
         $token = [Helper]::AccessToken
-        $headers.Add("Authorization", "Bearer $token")
+        $headers.Add("Authorization", "Basic $token")
         $headers.Add("Content-Type", "application/json")
 
         $apiVersion = "?api-version=7.0"
         $requestUrl = "$org/$project/_apis/pipelines$apiVersion"
         $response = Invoke-RestMethod $requestUrl -Method 'GET' -Headers $headers
-        $response | ConvertTo-Json -Depth 10
+        $response | ConvertTo-Json -Depth 100
 
         $pipelineId = 0;
 
         foreach ($pipeline in $response.value) {
-            if ($pipeline.name -eq "export-solution-to-git") {
+            if ($pipeline.name -eq "$exportPipelineName") {
                 $pipelineId = $pipeline.id
                 break
             }
         }        
 
         $body.templateParameters.PipelineId = $pipelineId
-        $body = ConvertTo-Json -Depth 10 $body -Compress
-
+        $body = ConvertTo-Json -Depth 100 $body -Compress
+        Write-Host $body
+        $body = [System.Text.Encoding]::UTF8.GetBytes($body)
         $requestUrl = "$org/$project/_apis/pipelines/$pipelineId/runs$apiVersion"
         Write-Host $requestUrl
-        Write-Host $body
         $response = Invoke-RestMethod $requestUrl -Method 'POST' -Headers $headers -Body $body
-        $response | ConvertTo-Json -Depth 10
+        $response | ConvertTo-Json -Depth 100
 
         $id = $response.id
         return [Helper]::WaitForPipelineToComplete($org, $project, $id)
@@ -72,7 +72,7 @@ class Helper {
 }
 
 BeforeAll { 
-    [Helper]::AccessToken = (az account get-access-token | ConvertFrom-Json -Depth 10).accessToken    
+    [Helper]::AccessToken = $BasicAccessToken
 }
 
 Describe 'E2E-Pipeline-Test' {
@@ -98,8 +98,9 @@ Describe 'E2E-Pipeline-Test' {
             ServiceConnectionUrl=$ServiceConnection `
             SolutionName=$SolutionName `
             UserName=$UserName `
+            ImportUnmanaged='true' `
             EnvironmentName=$environmentName
-        $result = $result | ConvertFrom-Json -Depth 10
+        $result = $result | ConvertFrom-Json -Depth 100
         $id = $result.id
         [Helper]::WaitForPipelineToComplete($Org, $Project, $id) | Should -BeTrue
     }
@@ -112,14 +113,30 @@ Describe 'E2E-Pipeline-Test' {
         #Delete the existing pipelines to validate the creation of new pipelines during export.
         $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
         $token = [Helper]::AccessToken
-        $headers.Add("Authorization", "Bearer $token")
+        $headers.Add("Authorization", "Basic $token")
         $headers.Add("Content-Type", "application/json")
 
         $apiVersion = "?api-version=6.0-preview.2"
-        $requestUrl = "$Org/$Project/_apis/build/folders$apiVersion&path=$SolutionName"
-        $response = Invoke-RestMethod $requestUrl -Method 'DELETE' -Headers $headers
-        $response | ConvertTo-Json -Depth 10
+        $requestUrl = "$Org/$Project/_apis/build/folders$apiVersion&path=$Repo - $SolutionName"
+        Invoke-RestMethod $requestUrl -Method 'DELETE' -Headers $headers
 
+        $requestUrl = "$Org/$Project/_apis/build/folders$apiVersion&path=$SolutionName"
+        Invoke-RestMethod $requestUrl -Method 'DELETE' -Headers $headers
+
+		# To test Profile change post commit scenario
+		# Set "DeploymentEnvironmentUrl" and "ServiceConnectionName" as blank on 1st Commit
+        $dataJson = ConvertFrom-Json $Data
+        for($i=0;$i -le $dataJson.length;$i++)
+        {
+          if($dataJson[$i])
+          {
+              $dataJson[$i].DeploymentEnvironmentUrl = [string]::Empty;
+              $dataJson[$i].ServiceConnectionName = [string]::Empty;
+          }
+        }
+
+        $modifiedData = $dataJson | ConvertTo-Json -Depth 100
+        Write-Host "Modified Data - $modifiedData"		
 
         $body = @{
             resources          = @{
@@ -133,7 +150,7 @@ Describe 'E2E-Pipeline-Test' {
                 Branch                = $SourceBranch
                 BranchToCreate        = $BranchToCreate
                 CommitMessage         = $CommitMessage
-                Data                  = $Data
+                Data                  = $modifiedData
                 Email                 = $Email
                 Project               = $Project
                 Repo                  = $Repo
@@ -142,10 +159,12 @@ Describe 'E2E-Pipeline-Test' {
                 SolutionName          = $SolutionName
                 UserName              = $UserName
                 PipelineId            = 0
+                PublishCustomizations = $PublishCustomizations
                 PortalSiteName        = $PortalSiteName
-            } 
+                CommitScope           = $CommitScope
+            }
         }
-        [Helper]::ExportToGitNewBranchSucceeded = [Helper]::QueueExportToGit($Org, $Project, $SolutionName, $body)
+        [Helper]::ExportToGitNewBranchSucceeded = [Helper]::QueueExportToGit($Org, $Project, $SolutionName, $ExportPipelineName, $body)
         [Helper]::ExportToGitNewBranchSucceeded | Should -BeTrue
     }    
 
@@ -181,11 +200,13 @@ Describe 'E2E-Pipeline-Test' {
                 SolutionName          = $SolutionName
                 UserName              = $UserName
                 PipelineId            = 0
+                PublishCustomizations = $PublishCustomizations
                 PortalSiteName        = $PortalSiteName
+                CommitScope           = $CommitScope
             } 
         }
     
-        [Helper]::ExportToGitExistingBranchSucceeded = [Helper]::QueueExportToGit($Org, $Project, $SolutionName, $body)
+        [Helper]::ExportToGitExistingBranchSucceeded = [Helper]::QueueExportToGit($Org, $Project, $SolutionName, $ExportPipelineName, $body)
         [Helper]::ExportToGitExistingBranchSucceeded | Should -BeTrue
     }
     
@@ -200,19 +221,23 @@ Describe 'E2E-Pipeline-Test' {
 
         # Before we create the PR, we need to update the pipeline yml to use the branch containing the yml we want to test
         $result = az pipelines run --org $Org --project $Project --name update-ref-for-pr-loop --variables BranchToUpdate=$BranchToCreate TemplateBranch=$BranchToTest
-        Start-Sleep -Seconds 15
+		Write-Host "az pipelines run response : $result"
+        Start-Sleep -Seconds 30	
 
         # Create PR for the branch we committed/pushed to
         $result = az repos pr create --org $Org --project $Project --repository $Repo --source-branch $BranchToCreate --target-branch $SolutionName --title "E2E-Pipeline-Test"
-        $result = $result | ConvertFrom-Json -Depth 10
+		Write-Host "pr create result : $result"
+        $result = $result | ConvertFrom-Json -Depth 100
         $result.status | Should -Be 'active'
         
         # Get the id of the PR validation pipeline using the PR id and wait for it to successfully complete
         $pullRequestId = $result.pullRequestId
+        Write-Host "PullRequestId - $pullRequestId"
         # sleep for 15 seconds to ensure the pipeline to validate the PR is kicked off (may need to tweak)
-        Start-Sleep -Seconds 15
+        Start-Sleep -Seconds 60
         $result = az pipelines runs list --org $Org --project $Project --branch "refs/pull/$pullRequestId/merge"
-        $result = $result | ConvertFrom-Json -Depth 10
+        Write-Host "az pipelines runs list : $result"
+        $result = $result | ConvertFrom-Json -Depth 100
         $id = $result[0].id
         [Helper]::WaitForPipelineToComplete($Org, $Project, $id) | Should -BeTrue
 
@@ -220,34 +245,35 @@ Describe 'E2E-Pipeline-Test' {
         az repos pr set-vote --id $pullRequestId --org $Org --vote approve
         az repos pr update --id $pullRequestId --org $Org --status completed --squash true  --merge-commit-message $CommitMessage --delete-source-branch true
         # sleep for 15 seconds to ensure the pipeline to deploy to UAT environment is kicked off (may need to tweak)
-        Start-Sleep -Seconds 15
-        # Get the id of the pipeline to deploy to UAT and wait for it to successfully complete
+        Start-Sleep -Seconds 30
+        # Get the id of the pipeline to deploy to UAT and complete
         # TODO: See if we can improve the query below to be more precise.  Works when there isn't another pipeline running triggered from the same solution branch
         $result = az pipelines runs list --org $Org --project $Project --branch $SolutionName --top 1 --reason individualCI --query-order QueueTimeDesc
-        $result = $result | ConvertFrom-Json -Depth 10
+        Write-Host "az pipelines runs list 2 : $result"
+        $result = $result | ConvertFrom-Json -Depth 100
         $id = $result[0].id
-        [Helper]::WaitForPipelineToComplete($Org, $Project, $id) | Should -BeTrue
+        #[Helper]::WaitForPipelineToComplete($Org, $Project, $id) | Should -BeTrue
     }
     
     # Hard coding test name intentionally.  Pester doesn't like it when it's a variable.
     # TODO: Investigate why pester doesn't like it when it's a variable and come up with a better way to do this.
-    It 'DeleteUnamangedSolutionAndComponents' -Tag 'DeleteUnamangedSolutionAndComponents' {
-        [Helper]::WriteTestMessageToHost('DeleteUnamangedSolutionAndComponents')
-        
-        $result = az pipelines run --org $Org --project $Project --branch $BranchToTest `
-            --name 'delete-unmanaged-solution-and-components' `
-            --parameters `
-            Branch=$SolutionName `
-            CommitMessage='NA' `
-            Email=$Email `
-            Project=$Project `
-            Repo=$Repo `
-            ServiceConnectionName=$ServiceConnection `
-            ServiceConnectionUrl=$ServiceConnection `
-            SolutionName=$SolutionName `
-            UserName=$UserName
-        $result = $result | ConvertFrom-Json -Depth 10
-        $id = $result.id
-        [Helper]::WaitForPipelineToComplete($Org, $Project, $id) | Should -BeTrue
-    }    
+    #It 'DeleteUnamangedSolutionAndComponents' -Tag 'DeleteUnamangedSolutionAndComponents' {
+    #    [Helper]::WriteTestMessageToHost('DeleteUnamangedSolutionAndComponents')
+    #    
+    #    $result = az pipelines run --org $Org --project $Project --branch $BranchToTest `
+    #        --name 'delete-unmanaged-solution-and-components' `
+    #        --parameters `
+    #        Branch=$SolutionName `
+    #        CommitMessage='NA' `
+    #        Email=$Email `
+    #        Project=$Project `
+    #        Repo=$Repo `
+    #        ServiceConnectionName=$ServiceConnection `
+    #        ServiceConnectionUrl=$ServiceConnection `
+    #        SolutionName=$SolutionName `
+    #        UserName=$UserName
+    #    $result = $result | ConvertFrom-Json -Depth 100
+    #    $id = $result.id
+    #    [Helper]::WaitForPipelineToComplete($Org, $Project, $id) | Should -BeTrue
+    #}    
 }

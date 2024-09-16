@@ -1,0 +1,84 @@
+# Multi-stage starter template for:
+# -Building the solution when changes to the contents of the solution folder are triggered (see trigger-SolutionName.yml for example trigger)
+# -Deploying the solution to a specific environment based on pipeline variables
+# This is most commonly used for PR Validation where both the build and deploy must suceeed in order for the PR checks to succeed.
+parameters:
+- name: pipelineDeploymentStage
+  type: string
+  default: "PreDeployment"
+steps:
+    - template: set-service-connection-url.yml
+      parameters:
+        serviceConnectionName: $(ServiceConnection)
+        serviceConnectionUrl: $(ServiceConnectionUrl)
+
+    - checkout: self
+      displayName: 'Checkout Source Branch'
+
+    - checkout: PipelineRepo
+      path: 'PipelineUtils'
+      displayName: 'Checkout Pipeline Branch'
+
+    # Use set-connection-variables task to get values from AzDO Service Connection to be used in scripts that don't use tasks
+    - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.set-connection-variables.PowerPlatformSetConnectionVariables@2
+      displayName: 'Set Pipeline Connection Variables'
+      name: pipelineHostVariables
+      inputs:
+        authenticationType: 'PowerPlatformSPN'
+        PowerPlatformSPN: '$(PipelineServiceConnectionName)'
+      condition: and(succeeded(), ne(variables['PipelineServiceConnectionName'], ''), not(contains(variables['PipelineServiceConnectionName'], 'PipelineServiceConnectionName')))
+
+    # Use set-connection-variables task to get values from AzDO Service Connection to be used in scripts that don't use tasks
+    - task: microsoft-IsvExpTools.PowerPlatform-BuildTools.set-connection-variables.PowerPlatformSetConnectionVariables@2
+      displayName: 'Set Environment Connection Variables'
+      name: environmentHostVariables
+      inputs:
+        authenticationType: 'PowerPlatformSPN'
+        PowerPlatformSPN: '$(ServiceConnection)'
+      condition: and(succeeded(), ne(variables['ServiceConnection'], ''), not(contains(variables['ServiceConnection'], 'ServiceConnection')))
+
+    - template: set-spn-token.yml
+      parameters:
+        serviceConnection: $(ServiceConnectionUrl)
+        tenantId: $(environmentHostVariables.BuildTools.TenantId)
+        clientId: $(environmentHostVariables.BuildTools.ApplicationId)
+        clientSecret: $(environmentHostVariables.BuildTools.ClientSecret)
+
+    - pwsh: |
+        Write-Host "Copying deployment settings to artifacts folder: $(Build.ArtifactStagingDirectory)\drop\"
+        $splitName = "$(Build.Repository.Name)".Split("/")
+        $repoName = $splitName[$splitName.Length - 1]
+        $sourceDirectory = "$(Build.SourcesDirectory)\$repoName\$(SolutionName)\config\*"
+        $destinationDirectory = "$(Pipeline.Workspace)\drop\"
+        if(!(Test-Path $destinationDirectory)) { 
+          New-Item -ItemType Directory -Force -Path $destinationDirectory
+        }
+        Copy-item -Force -Recurse -Verbose $sourceDirectory -Destination $destinationDirectory
+        Write-Host "Running the Post Deployment Settings Updates"
+        Write-Host "##vso[task.setvariable variable=SkipSolutionImport]true"
+      displayName: "Setting SkipSolutionImport to true for the Post Deployment Settings Updates"
+      condition: and(succeeded(), eq('${{ parameters.pipelineDeploymentStage }}', 'PostDeployment'))
+
+    # Run the post deployment settings updates
+    - ${{ if eq(parameters.pipelineDeploymentStage, 'PostDeployment') }}:
+      - template: deploy-Solution.yml
+        parameters:
+          serviceConnectionName: '$(ServiceConnection)'
+          serviceConnectionUrl: '$(ServiceConnectionUrl)'
+          environmentName: '$(EnvironmentName)'
+          solutionName: '$(SolutionName)'
+          cacheEnabled: 'true'
+
+    # Mark as succeeded
+    - pwsh: |
+        . "$env:POWERSHELLPATH/pipeline-functions.ps1"
+        Invoke-Pre-Deployment-Status-Update "$(PipelineStageRunId)" "20" "$(PipelineServiceConnectionUrl)" "$(AADHost)" "$(pipelineHostVariables.BuildTools.TenantId)" "$(pipelineHostVariables.BuildTools.ApplicationId)" "$(pipelineHostVariables.BuildTools.ClientSecret)"
+      displayName: "Mark the deployment as successful in Pipelines"
+      condition: and(succeeded(), ne(variables['PipelineStageRunId'], ''), not(contains(variables['PipelineStageRunId'], 'PipelineStageRunId')))
+
+    # Mark as failed
+    - pwsh: |
+        . "$env:POWERSHELLPATH/pipeline-functions.ps1"
+        Invoke-Pre-Deployment-Status-Update "$(PipelineStageRunId)" "30" "$(PipelineServiceConnectionUrl)" "$(AADHost)" "$(pipelineHostVariables.BuildTools.TenantId)" "$(pipelineHostVariables.BuildTools.ApplicationId)" "$(pipelineHostVariables.BuildTools.ClientSecret)"
+      displayName: "Mark the deployment as failed in Pipelines"
+      condition: and(failed(), ne(variables['PipelineStageRunId'], ''), not(contains(variables['PipelineStageRunId'], 'PipelineStageRunId')))

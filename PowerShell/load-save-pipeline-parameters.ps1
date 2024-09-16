@@ -1,3 +1,6 @@
+<#
+This function sets parameters in export pipeline.
+#>
 function Write-Export-Pipeline-Parameters {
     param (
         [Parameter(Mandatory)] [String]$filePath, 
@@ -19,6 +22,9 @@ function Write-Export-Pipeline-Parameters {
     Write-Pipeline-Parameters $filePath $pipelineParameterObject
 }
 
+<#
+This function sets parameters in deploy pipeline.
+#>
 function Write-Deploy-Pipeline-Parameters {
     param (
         [Parameter(Mandatory)] [String]$filePath, 
@@ -47,6 +53,9 @@ function Write-Build-Pipeline-Parameters {
     Write-Pipeline-Parameters $filePath $pipelineParameterObject
 }
 
+<#
+This function writes pipeline parameters.
+#>
 function Write-Pipeline-Parameters {
     param (
         [Parameter(Mandatory)] [String]$filePath,
@@ -56,8 +65,21 @@ function Write-Pipeline-Parameters {
     if (Test-Path $filePath) {
         Remove-Item $filePath
     }
-    $pipelineParameterObject | ConvertTo-Json -depth 100 | Out-File "$filePath"
+    [string]$pipelineParameterJson = $pipelineParameterObject | ConvertTo-Json -depth 100
+    if ($PSVersionTable.PSVersion.Major -gt 5) {
+        $pipelineParameterJson | Out-File "$filePath" -Encoding utf8NoBOM
+    }
+    else {
+        $utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($filePath, $pipelineParameterJson, $utf8NoBomEncoding)
+        # PowerShell < v6 does not support writing UTF8 without BOM using Out-File
+        # $pipelineParameterJson | Out-File "$filePath"
+    }
 }
+
+<#
+This function reads the pipeline parameters.
+#>
 function Read-Pipeline-Parameters {
     param (
         [Parameter(Mandatory)] [String]$filePath

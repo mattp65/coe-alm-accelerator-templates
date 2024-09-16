@@ -1,4 +1,7 @@
-# Testable outside of agent
+<#
+This function returns the Access Token.
+Testable outside of agent
+#>
 function Get-SpnToken {
     param (
         [Parameter(Mandatory)] [String]$tenantId,
@@ -13,6 +16,9 @@ function Get-SpnToken {
     return $OAuthReq.access_token
 }
 
+<#
+This function splits the environment url and returns the Host.
+#>
 function Get-HostFromUrl {
     param (
         [Parameter(Mandatory)] [String]$url
@@ -21,7 +27,9 @@ function Get-HostFromUrl {
     return $url.Split("://", $options)[1].Split("/")[0]
 }
 
-# Convenient inside of agent
+<#
+This function reads the Spn Token and sets SpnToken variable.
+#>
 function Set-SpnTokenVariableWithinAgent {    
     param (
         [Parameter(Mandatory)] [String]$tenantId,
@@ -34,9 +42,12 @@ function Set-SpnTokenVariableWithinAgent {
       
     $spnToken = Get-SpnToken $tenantId $clientId $clientSecret $dataverseHost $aadHost
 
-    Write-Host "##vso[task.setvariable variable=SpnToken]$spnToken"
+    Write-Host "##vso[task.setvariable variable=SpnToken;issecret=true]$spnToken"
 }
 
+<#
+This function sets the header parameters.
+#>
 function Set-DefaultHeaders {
     param (
         [Parameter(Mandatory)] [String]$token
@@ -47,6 +58,9 @@ function Set-DefaultHeaders {
     return $headers
 }
 
+<#
+This function sets the url by joining the host url and requestUrlRemainder.
+#>
 function Set-RequestUrl {
     param (
         [Parameter(Mandatory)] [String]$dataverseHost,
@@ -56,6 +70,9 @@ function Set-RequestUrl {
     return $requestUrl    
 }
 
+<#
+This function invokes Dataverse web api GET.
+#>
 function Invoke-DataverseHttpGet {
     param (
         [Parameter(Mandatory)] [String]$token,
@@ -68,6 +85,9 @@ function Invoke-DataverseHttpGet {
     return $response
 }
 
+<#
+This function invokes Dataverse web api POST.
+#>
 function Invoke-DataverseHttpPost {
     param (
         [Parameter(Mandatory)] [String]$token,
@@ -79,4 +99,36 @@ function Invoke-DataverseHttpPost {
     $requestUrl = Set-RequestUrl $dataverseHost $requestUrlRemainder
     $response = Invoke-RestMethod $requestUrl -Method 'POST' -Headers $headers -Body $body
     return $response
+}
+
+<#
+This function triggers to download the unmanaged and managed solution pipeline artifacts.
+#>
+function Invoke-Download-Solution-Artifact{
+    param (
+        [Parameter(Mandatory)] [String]$pipelineConnectionUrl,
+        [Parameter(Mandatory)] [String]$aadHost,
+        [Parameter(Mandatory)] [String]$clientId,
+        [Parameter(Mandatory)] [String]$clientSecret,
+        [Parameter(Mandatory)] [String]$tenantID,
+        [Parameter(Mandatory)] [String]$solutionZipDirectory,
+        [Parameter(Mandatory)] [String]$repo,
+        [Parameter(Mandatory)] [String]$solutionName,
+        [Parameter(Mandatory)] [String]$artifactUrl
+    )
+	
+    #Download the unmanaged and managed solution zips
+    $dataverseHost = Get-HostFromUrl "$pipelineConnectionUrl"
+    $spnToken = Get-SpnToken "$tenantID" "$clientId" "$clientSecret" "$dataverseHost" "$aadHost"
+
+    $headers = Set-DefaultHeaders $spnToken
+    $response = Invoke-RestMethod $artifactUrl -Method 'GET' -Headers $headers   
+
+    $bytes = [Convert]::FromBase64String($response.value)
+    [IO.File]::WriteAllBytes("$solutionZipDirectory\$solutionName" + "_managed.zip", $bytes)
+
+    $unmanagedArtifactUrl = "$artifactUrl".Replace("artifactfile", "artifactfileunmanaged")
+    $response = Invoke-RestMethod "$unmanagedArtifactUrl" -Method 'GET' -Headers $headers
+    $bytes = [Convert]::FromBase64String($response.value)
+    [IO.File]::WriteAllBytes("$solutionZipDirectory\$solutionName.zip", $bytes)
 }

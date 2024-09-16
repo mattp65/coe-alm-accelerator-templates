@@ -52,6 +52,18 @@ parameters:
 - name: PortalSiteName
   type: string
   default: "NA"
+- name: PublishCustomizations
+  type: string
+  default: "NA"
+- name: CommitScope
+  type: string
+  default: "1"
+- name: AgentPool
+  type: string
+  default: "Azure Pipelines"
+- name: VMImage
+  type: string
+  default: "windows-latest"
 trigger: none
 pr: none
 
@@ -59,15 +71,16 @@ name: delete-unmanaged-${{parameters.SolutionName}}-and-components-from-environm
 
 variables:
 - group: alm-accelerator-variable-group
-- name: vmImage
-  value: 'windows-2022'
 
 stages:
 - stage: exportAndDeleteUnmanaged
   jobs:
     - job: exportAndDeleteUnmanaged  
       pool:
-        vmImage: ${{ variables.vmImage }}
+        ${{ if and(ne(parameters.AgentPool, 'NA'), ne(parameters.AgentPool, '')) }}:
+          name: ${{parameters.AgentPool}}
+        ${{ if and(ne(parameters.VMImage, 'NA'), ne(parameters.VMImage, '')) }}:
+          vmImage: ${{parameters.VMImage}}
       steps:
       - checkout: none
 
@@ -89,7 +102,7 @@ stages:
           PowerPlatformSPN: ${{parameters.ServiceConnectionName}}
           SolutionName: ${{parameters.SolutionName}}
           Managed: true
-          SolutionOutputFile: '$(Pipeline.Workspace)\exported\${{parameters.SolutionName}}.zip'
+          SolutionOutputFile: '$(Pipeline.Workspace)\exported\${{parameters.SolutionName}}_managed.zip'
 
       - task: PublishPipelineArtifact@1
         inputs:
@@ -114,7 +127,10 @@ stages:
   jobs:
     - job: importAndDeleteManaged  
       pool:
-        vmImage: ${{ variables.vmImage }}
+        ${{ if and(ne(parameters.AgentPool, 'NA'), ne(parameters.AgentPool, '')) }}:
+          name: ${{parameters.AgentPool}}
+        ${{ if and(ne(parameters.VMImage, 'NA'), ne(parameters.VMImage, '')) }}:
+          vmImage: ${{parameters.VMImage}}
       steps:
       - checkout: none
 
@@ -135,10 +151,11 @@ stages:
         inputs:
           authenticationType: PowerPlatformSPN
           PowerPlatformSPN: ${{parameters.ServiceConnectionName}}
-          SolutionInputFile: '$(Pipeline.Workspace)\${{parameters.SolutionName}}.zip'
+          SolutionInputFile: '$(Pipeline.Workspace)\${{parameters.SolutionName}}_managed.zip'
           OverwriteUnmanagedCustomizations: true
           PublishWorkflows: false
           ConvertToManaged: true
+          MaxAsyncWaitTime: 120
 
       - pwsh: |
           $errorMessage = "Since the import failed, your environment is in an unhealthy state. "

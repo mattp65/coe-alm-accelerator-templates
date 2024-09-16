@@ -18,6 +18,7 @@
 # Data: Additional Data (e.g. JSON Payload) for the export to configure deployment pipelines
 # PipelineId to create a Github release for the CoE Starter Kit solution
 # PortalSiteName: Power Apps Portal/Power Pages website name
+# CommitScope: Options are Commit Solution and Settings (1), Commit Solution Only (2), Commit Settings Only (3)
 parameters:
 - name: Branch
   type: string
@@ -58,7 +59,18 @@ parameters:
 - name: PortalSiteName
   type: string
   default: "NA"
-
+- name: PublishCustomizations
+  type: string
+  default: "true"
+- name: CommitScope
+  type: string
+  default: "1"
+- name: AgentPool
+  type: string
+  default: "Azure Pipelines"
+- name: VMImage
+  type: string
+  default: "windows-latest"
 trigger: none
 pr: none
 
@@ -74,8 +86,10 @@ stages:
   - job: export_solution_to_git
 
     pool:
-      vmImage: 'windows-2022'
-
+      ${{ if and(ne(parameters.AgentPool, 'NA'), ne(parameters.AgentPool, '')) }}:
+        name: ${{parameters.AgentPool}}
+      ${{ if and(ne(parameters.VMImage, 'NA'), ne(parameters.VMImage, '')) }}:
+        vmImage: ${{parameters.VMImage}}
     steps:
     - pwsh: |
         # Workaround for git Filename too long issue 
@@ -106,3 +120,7 @@ stages:
         userName: ${{parameters.UserName}}
         configurationData: ${{parameters.Data}}
         portalSiteName: ${{parameters.PortalSiteName}}
+        publishCustomizations: ${{parameters.PublishCustomizations}}
+        commitScope: ${{parameters.CommitScope}}
+        createSolutionBranch: 'true'
+        agentPool: ${{parameters.AgentPool}}

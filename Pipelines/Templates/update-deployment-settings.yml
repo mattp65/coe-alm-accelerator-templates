@@ -14,27 +14,71 @@ parameters:
 - name: useDeploymentSettingsPlaceholders
   type: string
   default: 'true'
-
+- name: commitScope
+  type: string
+  default: '1'
+- name: currentBranch
+  type: string
+- name: branchToCreate
+  type: string
+- name: createSolutionBranch
+  type: string
+  default: 'true'
+- name: agentPool
+  type: string
+  default: 'Azure Pipelines'
+- name: pipelineServiceConnectionName
+  type: string
+  default: ''
+- name: pipelineServiceConnectionUrl
+  type: string
+  default: ''
+- name: pipelineStageRunId
+  type: string
+  default: ''
 steps:
 - powershell: |
       # load PowerShell files into memory
       . "$env:POWERSHELLPATH/update-deployment-settings.ps1"
 
-      #Check to see if pipeline project and repo have been overridden
+      # We need the project and repository where the yaml for this pipeline exists. Unfortunately, there's no way to get this directly from any of the available 
+      # predefined variables. We can get the repository name from $(Build.Repository.Name). However, there's no similar variable for the project name associated 
+      # with the repository as $(System.TeamProject) refers to where the pipeline that consumes this YAML was created. In the case that the pipelines are hosted in
+      # another project the only way to get both of these is to parse $(Build.Repository.Uri) which has both the project and repo name.
+      # Name  : $(Build.Repository.Uri)
+      # Current Value : https://[ORGNAME]@dev.azure.com/[ORGNAME]/[PROJECTNAME]/_git/[REPONAME]
+      # Legacy Value : https://[ORGNAME].visualstudio.com/[PROJECTNAME]/_git/[REPONAME] 
+      # Parsing this could be brittle and have side effects so we've included the ability to set variables to override this parsing (i.e. PipelineProject and PipelineRepository)
+      # These can be set as global variables in the alm-accelerator-variable-group.
+
+      #Default to pipeline project and repo to the project where the pipeline is running and the and repo of this yaml
       $pipelineProject = "$(System.TeamProject)"
-      if(!'$(PipelineProject)'.Contains("PipelineProject")) {
-        $pipelineProject = "$(PipelineProject)"
+      $pipelineRepo = "$(Build.Repository.Name)"
+
+      [string[]]$segments = ([System.Uri]"$(Build.Repository.Uri)").Segments | Select-Object -Last 3 | ForEach-Object { $_.TrimEnd("/") }
+
+      #Use the parsed value from the repo uri if it follows the expected format
+      if ($segments.Length -gt 2) {
+        $pipelineProject = [uri]::UnescapeDataString($segments[0])
+        $pipelineRepo = [uri]::UnescapeDataString($segments[2])
       }
 
-      $pipelineRepo = "$(Build.Repository.Name)"
-      if(!'$(PipelineRepository)'.Contains("PipelineRepository")) {
+      #Finally, use the override variables to bypass the options above
+      if(!'$(PipelineProject)'.Contains('$(')) {
+        $pipelineProject = "$(PipelineProject)"
+      }
+      if(!'$(PipelineRepository)'.Contains('$(')) {
         $pipelineRepo = "$(PipelineRepository)"
       }
 
+      $currentBranch = '${{parameters.currentBranch}}'
+      if(-not ('${{parameters.branchToCreate}}' -match 'Commit to existing branch specified in Branch parameter')) {
+        $currentBranch = '${{parameters.branchToCreate}}'
+      }
       #Call the deployment settings powershell
-      Set-DeploymentSettingsConfiguration '$(Build.SourcesDirectory)' '$(Agent.BuildDirectory)\PipelineUtils' "$pipelineProject" "$pipelineRepo" '$(CdsBaseConnectionString)' '$(XrmDataPowerShellVersion)' '$(CoETools_Microsoft_Xrm_Data_PowerShell)' '${{parameters.orgUrl}}' '${{parameters.projectName}}' '${{parameters.repo}}' 'Bearer' '${{parameters.serviceConnection}}' '${{parameters.solutionName}}' '$(Agent.OS)' '${{parameters.useDeploymentSettingsPlaceholders}}'
+      Set-DeploymentSettingsConfiguration '$(Build.SourcesDirectory)' '$(Agent.BuildDirectory)\PipelineUtils' "$pipelineProject" "$pipelineRepo" '$(connectionVariables.BuildTools.DataverseConnectionString)' '$(XrmDataPowerShellVersion)' '$(CoETools_Microsoft_Xrm_Data_PowerShell)' '${{parameters.orgUrl}}' '${{parameters.projectName}}' '${{parameters.repo}}' 'Bearer' '${{parameters.serviceConnection}}' '${{parameters.solutionName}}' $currentBranch '${{parameters.createSolutionBranch}}' '${{parameters.pipelineServiceConnectionName}}' '${{parameters.pipelineServiceConnectionUrl}}' '${{parameters.pipelineStageRunId}}' '${{parameters.agentPool}}' '$(Agent.OS)' '${{parameters.useDeploymentSettingsPlaceholders}}'
   env:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
     DEPLOYMENT_SETTINGS: ${{parameters.configurationData}}
   displayName: 'Update Deployment Settings'
-  condition: and(succeeded(), ne(variables.GenerateDeploymentSettings, 'false'))
+  condition: and(succeeded(), ne(variables.GenerateDeploymentSettings, 'false'),or(eq('${{parameters.commitScope}}', '1'),eq('${{parameters.commitScope}}', '3')))

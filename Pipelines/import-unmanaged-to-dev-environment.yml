@@ -43,11 +43,22 @@ parameters:
   default: "NA"
 - name: ImportUnmanaged
   type: string
-  default: "NA"
+  default: "true"
 - name: PortalSiteName
   type: string
   default: "NA"
-
+- name: PublishCustomizations
+  type: string
+  default: "NA"
+- name: CommitScope
+  type: string
+  default: "1"
+- name: AgentPool
+  type: string
+  default: "Azure Pipelines"
+- name: VMImage
+  type: string
+  default: "windows-latest"
 trigger: none
 pr: none
 
@@ -63,37 +74,22 @@ stages:
   - job: import_unmanaged_solution
   
     pool:
-      vmImage: 'windows-2022'
-
+      ${{ if and(ne(parameters.AgentPool, 'NA'), ne(parameters.AgentPool, '')) }}:
+        name: ${{parameters.AgentPool}}
+      ${{ if and(ne(parameters.VMImage, 'NA'), ne(parameters.VMImage, '')) }}:
+        vmImage: ${{parameters.VMImage}}
     steps:
-    - template: Templates\set-service-connection-url.yml
-      parameters:
-        serviceConnectionName: ${{parameters.ServiceConnectionName}}
-        serviceConnectionUrl: ${{parameters.ServiceConnectionUrl}}
+    - checkout: self
+      path: 'PipelineUtils'
+      displayName: 'Checkout Pipeline Branch'
 
-    - pwsh: |
-        Write-Host "##vso[task.setvariable variable=RepoName]${{parameters.Repo}}"
-      displayName: 'Set Source Repo Name'
-
-    - template: Templates\build-unmanaged-Solution.yml
+    - template: Templates\import-Solution-To-Dev-Environment.yml
       parameters:
+        branch: ${{parameters.Branch}}
         project: ${{parameters.Project}}
         repo: ${{parameters.Repo}}
-        branch: ${{parameters.Branch}}
         serviceConnectionName: ${{parameters.ServiceConnectionName}}
         serviceConnectionUrl: ${{parameters.ServiceConnectionUrl}}
         solutionName: ${{parameters.SolutionName}}
-
-    - template: Templates\deploy-Solution.yml
-      parameters:
         environmentName: ${{parameters.EnvironmentName}}
-        serviceConnectionName: ${{parameters.ServiceConnectionName}}
-        serviceConnectionUrl: ${{parameters.ServiceConnectionUrl}}
-        solutionName: ${{parameters.SolutionName}}
-        importUnmanaged: 'true'
-        skipBuildToolsInstaller: 'true'
-        
-    - template: Templates\update-canvas-app-ownership.yml
-      parameters:
-        serviceConnectionUrl: ${{parameters.ServiceConnectionUrl}}
-        solutionName: ${{parameters.SolutionName}}
+        importUnmanaged: ${{parameters.ImportUnmanaged}}
